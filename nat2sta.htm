@@ -1,0 +1,361 @@
+<html>
+<head>
+<script>
+"use strict"
+
+// Funció inspirada en una de SitePoint Pty. Ltd, www.sitepoint.com
+function Ajax() 
+{
+	this.req = null;
+	this.url = null;
+	this.status = null;
+	this.statusText = '';
+	this.method = 'GET';
+	this.async = true;
+	this.dataPayload = "";
+	this.readyState = null;
+	this.responseText = null;
+	this.responseXML = null;
+	this.handleResp = null;
+	this.responseFormat = 'text/plain', // 'text/plain', 'text/xml', 'object'
+	this.requestFormat = 'application/x-www-form-urlencoded'  //només per POST
+	this.structResp=null;
+	this.mimeType = null;  
+	//this.headers = [];
+	this.requestHeaders=[];
+	this.accessToken = null;
+	this.accessTokenType =null;
+
+	this.init = function() {
+		var i = 0;
+		var reqTry = [ 
+			function() { return new XMLHttpRequest(); },
+			function() { return new ActiveXObject('Msxml2.XMLHTTP') },
+			function() { return new ActiveXObject('Microsoft.XMLHTTP' )} ];
+      
+		while (!this.req && (i < reqTry.length)) {
+			try { 
+				this.req = reqTry[i++]();
+			} 
+			catch(e) {}
+		}
+		return true;
+	};
+	this.doGet = function(url, hand, response_format, struct) 
+	{
+		//alert(url);  //·$·Per a depurar
+		this.url = url;
+		this.handleResp = hand;
+		this.responseFormat = response_format || 'text/plain';
+		this.structResp = struct;
+		this.method = 'GET';
+		this.doReq();
+	};
+
+	this.doPost = function(url, request_format, dataPayload, hand, response_format, struct) 
+	{
+		this.url = url;
+		this.requestFormat = request_format || 'application/x-www-form-urlencoded';    
+		this.dataPayload = dataPayload;
+		this.handleResp = hand;
+		this.responseFormat = response_format || 'text/plain';
+		this.structResp = struct;
+		this.method = 'POST';
+		this.doReq();
+	};
+	
+	this.doPut = function(url, request_format, dataPayload, hand, response_format, struct) 
+	{
+		this.url = url;
+		this.requestFormat = request_format || 'application/x-www-form-urlencoded';    
+		this.dataPayload = dataPayload;
+		this.handleResp = hand;
+		this.responseFormat = response_format || 'text/plain';
+		this.structResp = struct;
+		this.method = 'PUT';
+		this.doReq();
+	};
+	
+	this.doDelete = function(url, hand, response_format, struct) 
+	{
+		//alert(url);
+		this.url = url;
+		this.handleResp = hand;
+		this.responseFormat = response_format || 'text/plain';
+		this.structResp = struct;
+		this.method = 'DELETE';
+		this.doReq();
+	};
+	
+	this.doReqIndirect = function(method, url, request_format, dataPayload, hand, response_format, struct)
+	{
+		if (method=="POST")
+			this.doPost(url, request_format, dataPayload, hand, response_format, struct);
+		else if (method=="PUT")
+			this.doPut(url, request_format, dataPayload, hand, response_format, struct);
+		else if (method=="DELETE")
+			this.doDelete(url, hand, response_format, struct);
+		else
+			this.doGet(url, hand, response_format, struct);
+	};	
+
+	this.doReq = function() 
+	{
+		var self = null;
+		var req = null;
+		var headArr = [];
+    
+		if (!this.init()) {
+			alert('Could not create XMLHttpRequest object.');
+			return;
+		}
+			   
+		req = this.req;		
+		req.open(this.method, this.url, this.async);
+
+		if (this.accessTokenType && this.accessTokenType.length)
+   			this.setRequestHeader("nb-access-token-type", this.accessTokenType);
+  		if (this.accessToken && this.accessToken.length)
+			this.setRequestHeader("Authorization", "Bearer " + this.accessToken);
+		if ((this.method == 'POST' || this.method == 'PUT') && this.requestFormat) 
+			req.setRequestHeader('Content-Type', this.requestFormat);
+		if ((this.method == 'POST' || this.method == 'PUT') && this.responseFormat)
+			req.setRequestHeader('Accept', this.responseFormat);
+		//req.setRequestHeader('Access-Control-Expose-Headers', '*');  Aquesta línia no hi hauria de ser.
+
+		for (var i=0; i<this.requestHeaders.length; i++)
+			req.setRequestHeader(this.requestHeaders[i].name, this.requestHeaders[i].value);
+
+		self = this;
+	
+		req.onreadystatechange = function() {
+			var resp = null;
+			self.readyState = req.readyState;
+			if (req.readyState == 2)  // this.HEADERS_RECEIVED
+			{
+			    // Get the raw header string
+			    var headers = req.getAllResponseHeaders();
+			
+				// Convert the header string into an array
+				// of individual headers
+				var arr = headers.trim().split(/[\r\n]+/);
+
+				// Create a map of header names to values
+				req.responseHeaders = {};
+				arr.forEach(function (line) {
+				  var parts = line.split(': ');
+				  var header = parts.shift();
+				  var value = parts.join(': ');
+				  req.responseHeaders[header] = value;
+				});
+		    }
+
+			else if (req.readyState == 4) 
+			{
+				self.status = req.status;
+				self.statusText = req.statusText;
+				self.responseText = req.responseText;
+				self.responseXML = req.responseXML;
+				switch(self.responseFormat) {
+					default:
+					case 'text/plain':
+						resp = self.responseText;
+						break;
+					case 'text/xml':
+						resp = self.responseXML;
+						break;					
+					case 'application/json':
+						if (self.responseText=="")
+						{
+							resp = "";
+							break;
+						}
+						if (self.responseText)
+						{
+							try {
+								resp = JSON.parse(self.responseText);
+							} 
+							catch (e) {
+								self.handleErr("JSON file error: " + self.responseText, self.structResp);
+								return;
+							}
+						}						
+						break;					
+					case 'object':
+						resp = req;
+						break;
+				}
+
+				if(self.structResp)
+					self.structResp.text=self.responseText;
+				if (self.status > 199 && self.status < 300) {
+					if (!self.handleResp) {
+						alert('No response handler defined for this XMLHttpRequest object.');
+            					return;
+					}
+					if(self.structResp) 
+						self.handleResp(resp, self.structResp);
+					else
+						self.handleResp(resp);
+				} else {
+					self.handleErr(resp, self.structResp);
+				}
+			}
+		}
+		req.send(this.dataPayload);
+	};
+	this.abort = function() {
+		if (this.req) {
+			this.req.onreadystatechange = function() { };
+			this.req.abort();
+			this.req = null;
+		}
+	};
+	this.handleErr = function() {
+		var errorWin;
+		// Create new window and display error
+		try {
+			errorWin = window.open('', 'errorWin');
+			errorWin.document.body.innerHTML = this.responseText;
+		}
+		// If pop-up gets blocked, inform user
+		catch(e) {
+			alert('An error occurred, but the error message cannot be displayed because of your browser\'s pop-up blocker.\n' +
+				'You could try to allow pop-ups from this Web site. Meanwhile, the text version of the error is:\n' + this.responseText);
+		}
+	};
+	this.setMimeType = function(mimeType) {
+		this.mimeType = mimeType;
+	};  
+	this.setHandlerResp = function(funcRef) {
+		this.handleResp = funcRef;
+	};
+	this.setHandlerErr = function(funcRef) {
+		this.handleErr = funcRef; 
+	};
+	this.setHandlerBoth = function(funcRef) {
+		this.handleResp = funcRef;
+		this.handleErr = funcRef;
+	};
+	this.setRequestHeader = function(headerName, headerValue) {
+		this.requestHeaders.push({"name": headerName, "value": headerValue});
+		//this.headers.push(headerName + ': ' + headerValue);
+	};
+
+	this.getResponseHeader = function(headerName) {
+		return this.req.responseHeaders[headerName.toLowerCase()];
+	};
+
+	this.setAccessToken = function(accessToken, accessTokenType) {
+		this.accessToken=accessToken;
+		this.accessTokenType=accessTokenType;
+	};
+}
+
+function ErrorRespostaAjax(resp, obj)
+{
+	if (typeof resp === 'object')
+		obj.progressArea.value+="Error: \n" + JSON.stringify(resp);
+	else
+		obj.progressArea.value+="Error: \n" + resp;
+}
+
+function ExtractIdFromURL(url)
+{
+	if (-1==url.indexOf("'") || -1==url.indexOf("'", url.indexOf("'")+1))
+		return url;
+	return url.substring(url.indexOf("'")+1,url.indexOf("'",url.indexOf("'")+1));
+}
+
+//Party
+
+function CreatePartyIfNeeded(obj)
+{
+	obj.progressArea.value+="\nNatusfera user name is '"+obj.natObj.user_login+"'. Checking STAplus Parties...\n";
+	var ajax=new Ajax();
+	ajax.doGet(obj.sta+"/Parties?$select=nickName,role,id&$filter=nickName eq '"+obj.natObj.user_login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
+}
+
+function InterpretParty(parties, obj)
+{
+	obj.iFunction++;
+	if (parties && parties.value && parties.value.length)
+	{
+		var id=parties.value[0]["@iot.id"];
+		obj.progressArea.value+="Party \"" + obj.natObj.user_login + "\" already existed under id=\""+id+"\"\n";
+		StorePartyId(id, obj);
+	}
+	else					
+		CreateParty(obj);
+}
+
+function CreateParty(obj)
+{
+	var party={
+	    "nickName": obj.natObj.user_login,
+	    "role": "individual",  //"institution"
+	    "authId": "1ffffff1-1ff1-1ff1-1ff1-1ffffffffff1"
+	}	
+	obj.progressArea.value+="Creating the Party \"" + obj.natObj.user_login + "\"...\n";
+	obj.ajax=new Ajax();
+	obj.ajax.setAccessToken(obj.accessToken, null);
+	obj.ajax.setHandlerErr(ErrorRespostaAjax);
+	obj.ajax.doPost(obj.sta+"/Parties", "application/json", JSON.stringify(party), AvaluaRespostaCreateParty, "application/json", obj);
+}
+
+function AvaluaRespostaCreateParty(data, obj)
+{
+	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
+	obj.progressArea.value+="Party \"" + obj.natObj.user_login + "\" CREATED under id=\""+id+"\"\n";
+	StorePartyId(id, obj);
+}
+
+
+function StorePartyId(id, obj)
+{
+	obj.partyURI=id;
+	if (obj.iFunction<obj.functions.length)
+		obj.functions[obj.iFunction](obj);
+}
+
+// Getting the Natusfera record.
+function GetNatusferaRecord(nat, obj)
+{
+	obj.iFunction=0;
+	var ajax_nat=new Ajax();
+	obj.progressArea.value+="Reading the Natusfera record \"" + nat + "\"...\n";
+	ajax_nat.setHandlerErr(ErrorRespostaAjax);
+	ajax_nat.doGet(nat, InterpretNatusferaRecord, "application/json", obj);
+}
+
+function InterpretNatusferaRecord(natObj, obj)
+{
+	obj.natObj=natObj;
+	obj.progressArea.value+="Natusfera record downloaded. Extrancting information...\n";
+	obj.functions[obj.iFunction](obj);
+}
+
+// Transforming one Natusfera record into a STAplue
+function Nat2STA(nat, sta, token, progressArea)
+{
+	GetNatusferaRecord(nat, {functions: [CreatePartyIfNeeded], sta: sta, accessToken: token, progressArea: progressArea})
+	return false;
+}
+</script>
+</head>
+
+<body>
+<h1>Exporting Natusfera records to STAPlus</h1>
+
+<form name="form" onSubmit="return Nat2STA(document.form.nat.value, document.form.sta.value, document.form.token.value, document.form.progress);">
+Record in Natusfera: <input type="text" size="60" name="nat" value="https://natusfera.gbif.es/observations/313411.json"> (in JSON format)<br>
+Root of the STA+ service: <input type="text" size="60" name="sta" value="https://cos4cloud.secd.eu/staplus/v1.1"><br>
+Access Token: <input type="text" size="60" name="token" value="a5a2cc3b97d9df04e70f28a2beb11c2a5426e2e4"><br>
+<input type="submit" value="Export to STA+">
+<p>
+<textarea id="progress-area" name="progress" rows=25 cols=80>
+</textarea>
+</form>
+
+</body>
+</html>
