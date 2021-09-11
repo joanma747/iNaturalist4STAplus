@@ -267,22 +267,40 @@ function ExtractIdFromURL(url)
 	return url.substring(url.indexOf("'")+1,url.indexOf("'",url.indexOf("'")+1));
 }
 
-//Party
+function ExtractNatEndPoint(url)
+{
+	var start=url.indexOf("://");
+	if (-1==start)
+		start=0;
+	else
+		start+=3;
+	if (-1==url.substring(start).indexOf("/"))	
+		return url;
+	return url.substring(0, url.substring(start).indexOf("/")+start);
+}
+
+function SayDone(obj)
+{
+	obj.progressArea.value+="\nDone!\n";
+}
+
+///////////////Party
 
 function CreatePartyIfNeeded(obj)
 {
-	obj.progressArea.value+="\nNatusfera user name is '"+obj.natObj.user_login+"'. Checking STAplus Parties...\n";
+	obj.iFunction++;
+	obj.progressArea.value+="\nNatusfera user name is '"+obj.natObs.user_login+"'. Checking STAplus Parties...\n";
 	var ajax=new Ajax();
-	ajax.doGet(obj.sta+"/Parties?$select=nickName,role,id&$filter=nickName eq '"+obj.natObj.user_login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
+	ajax.setHandlerErr(ErrorRespostaAjax);
+	ajax.doGet(obj.sta+"/Parties?$select=nickName,role,id&$filter=nickName eq '"+obj.natObs.user_login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
 }
 
-function InterpretParty(parties, obj)
+function InterpretParty(resources, obj)
 {
-	obj.iFunction++;
-	if (parties && parties.value && parties.value.length)
+	if (resources && resources.value && resources.value.length)
 	{
-		var id=parties.value[0]["@iot.id"];
-		obj.progressArea.value+="Party \"" + obj.natObj.user_login + "\" already existed under id=\""+id+"\"\n";
+		var id=resources.value[0]["@iot.id"];
+		obj.progressArea.value+="Party \"" + obj.natObs.user_login + "\" already existed under id=\""+id+"\"\n";
 		StorePartyId(id, obj);
 	}
 	else					
@@ -292,24 +310,23 @@ function InterpretParty(parties, obj)
 function CreateParty(obj)
 {
 	var party={
-	    "nickName": obj.natObj.user_login,
+	    "nickName": obj.natObs.user_login,
 	    "role": "individual",  //"institution"
 	    "authId": "1ffffff1-1ff1-1ff1-1ff1-1ffffffffff1"
 	}	
-	obj.progressArea.value+="Creating the Party \"" + obj.natObj.user_login + "\"...\n";
+	obj.progressArea.value+="Creating the Party \"" + obj.natObs.user_login + "\"...\n";
 	obj.ajax=new Ajax();
 	obj.ajax.setAccessToken(obj.accessToken, null);
 	obj.ajax.setHandlerErr(ErrorRespostaAjax);
-	obj.ajax.doPost(obj.sta+"/Parties", "application/json", JSON.stringify(party), AvaluaRespostaCreateParty, "application/json", obj);
+	obj.ajax.doPost(obj.sta+"/Parties", "application/json", JSON.stringify(party), EvaluateResposeCreateParty, "application/json", obj);
 }
 
-function AvaluaRespostaCreateParty(data, obj)
+function EvaluateResposeCreateParty(data, obj)
 {
 	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
-	obj.progressArea.value+="Party \"" + obj.natObj.user_login + "\" CREATED under id=\""+id+"\"\n";
+	obj.progressArea.value+="Party \"" + obj.natObs.user_login + "\" CREATED under id=\""+id+"\"\n";
 	StorePartyId(id, obj);
 }
-
 
 function StorePartyId(id, obj)
 {
@@ -318,27 +335,216 @@ function StorePartyId(id, obj)
 		obj.functions[obj.iFunction](obj);
 }
 
-// Getting the Natusfera record.
-function GetNatusferaRecord(nat, obj)
+
+///////////////Project
+
+function CreateProjectIfNeeded(obj)
+{
+	obj.iFunction++;
+	if (obj.natObs.project_observations && obj.natObs.project_observations.length && obj.natObs.project_observations[0].project && obj.natObs.project_observations[0].project.id && obj.natObs.project_observations[0].project.title)
+	{
+		var name=obj.natObs.project_observations[0].project.title;
+		obj.progressArea.value+="\nNatusfera project title is '"+name+"'. Checking STAplus Projects...\n";
+		var ajax=new Ajax();
+		ajax.setHandlerErr(ErrorRespostaAjax);
+		ajax.doGet(obj.sta+"/Projects?$select=name,id&$filter=name eq '"+encodeURIComponent(name)+"'", InterpretProject, "application/json", obj);
+	}
+	else
+		StoreProjectId(null, obj);
+}
+
+function InterpretProject(resources, obj)
+{
+	if (resources && resources.value && resources.value.length)
+	{
+		var id=resources.value[0]["@iot.id"];
+		obj.progressArea.value+="Project \"" + obj.natObs.project_observations[0].project.title + "\" already existed under id=\""+id+"\"\n";
+		StoreProjectId(id, obj);
+	}
+	else					
+		GetCreationDateProject(obj);
+}
+
+function GetCreationDateProject(obj)
+{
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorRespostaAjax);
+	ajax.doGet(obj.nat+"/projects/"+obj.natObs.project_observations[0].project.id + ".json", InterpretNatProject, "application/json", obj);
+}
+
+function InterpretNatProject(projects, obj)
+{
+	if (projects && projects.created_at)
+		CreateProject(obj, projects.created_at, projects.terms ? projects.terms : "");
+	else
+	{
+		var d = new Date();
+		CreateProject(obj, d.toISOString(), "");
+	}
+}
+
+function CreateProject(obj, created_at, terms)
+{
+
+	var project={
+		"name": obj.natObs.project_observations[0].project.title,
+		"description": "This is the project " + obj.natObs.project_observations[0].project.id + " in Natusfera",
+		"url" : obj.nat+"/projects/" + obj.natObs.project_observations[0].id,
+		"termsOfUse": terms,
+		"created" : created_at
+	}	
+	obj.progressArea.value+="Creating the Project \"" + obj.natObs.project_observations[0].project.title + "\"...\n";
+	obj.ajax=new Ajax();
+	obj.ajax.setAccessToken(obj.accessToken, null);
+	obj.ajax.setHandlerErr(ErrorRespostaAjax);
+	obj.ajax.doPost(obj.sta+"/Projects", "application/json", JSON.stringify(project), EvaluateResposeCreateProject, "application/json", obj);
+}
+
+function EvaluateResposeCreateProject(data, obj)
+{
+	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
+	obj.progressArea.value+="Project \"" + obj.natObs.project_observations[0].project.title + "\" CREATED under id=\""+id+"\"\n";
+	StoreProjectId(id, obj);
+}
+
+function StoreProjectId(id, obj)
+{
+	if (id)
+		obj.projectURI=id;
+	if (obj.iFunction<obj.functions.length)
+		obj.functions[obj.iFunction](obj);
+}
+
+
+///////////////Human Sensor
+
+function CreateHumanSensorIfNeeded(obj)
+{
+	obj.iFunction++;
+	obj.progressArea.value+="\nChecking STAplus Sensors...\n";
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorRespostaAjax);
+	ajax.doGet(obj.sta+"/Sensors?$select=name,id&$filter=name eq 'Human Eye'", InterpretSensor, "application/json", obj);
+}
+
+function InterpretSensor(resources, obj)
+{
+	if (resources && resources.value && resources.value.length)
+	{
+		var id=resources.value[0]["@iot.id"];
+		obj.progressArea.value+="Sensor \"Human Eye\" already existed under id=\""+id+"\"\n";
+		StoreSensorId(id, obj);
+	}
+	else					
+		CreateHumanSensor(obj);
+}
+
+function CreateHumanSensor(obj)
+{
+	var sensor={
+		"name": "Human Eye",
+		"description": "Eye of the observer",
+		"encodingType": "text/html",
+		"metadata": "https://en.wikipedia.org/wiki/Human_eye"
+	}
+
+	obj.progressArea.value+="Creating the Sensor \"Human Eye\"...\n";
+	obj.ajax=new Ajax();
+	obj.ajax.setAccessToken(obj.accessToken, null);
+	obj.ajax.setHandlerErr(ErrorRespostaAjax);
+	obj.ajax.doPost(obj.sta+"/Sensors", "application/json", JSON.stringify(sensor), EvaluateResposeCreateSensor, "application/json", obj);
+}
+
+function EvaluateResposeCreateSensor(data, obj)
+{
+	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
+	obj.progressArea.value+="Sensor \"Human Eye\" CREATED under id=\""+id+"\"\n";
+	StoreSensorId(id, obj);
+}
+
+function StoreSensorId(id, obj)
+{
+	obj.sensorURI=id;
+	if (obj.iFunction<obj.functions.length)
+		obj.functions[obj.iFunction](obj);
+}
+
+
+///////////////ObservedProperty
+
+function CreateTaxonObservedPropertyIfNeeded(obj)
+{
+	obj.iFunction++;
+	obj.progressArea.value+="\nChecking STAplus ObservedProperties...\n";
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorRespostaAjax);
+	ajax.doGet(obj.sta+"/ObservedProperties?$select=name,definition,id&$filter=name eq 'Taxon' and definition eq 'https://www.gbif.org/dataset/d7dddbf4-2cf0-4f39-9b2a-bb099caae36c'", InterpretObservedProperty, "application/json", obj);
+}
+
+function InterpretObservedProperty(resources, obj)
+{
+	if (resources && resources.value && resources.value.length)
+	{
+		var id=resources.value[0]["@iot.id"];
+		obj.progressArea.value+="ObserverProperty \"Taxon\" already existed under id=\""+id+"\"\n";
+		StoreObservedPropertyId(id, obj);
+	}
+	else					
+		CreateTaxonObservedProperty(obj);
+}
+
+function CreateTaxonObservedProperty(obj)
+{
+	var observedProperty={
+		"name": "Taxon",
+		"description": "GBIF Backbone Taxonomy",
+		"definition": "https://www.gbif.org/dataset/d7dddbf4-2cf0-4f39-9b2a-bb099caae36c"
+	}
+
+	obj.progressArea.value+="Creating the ObservedProperty \"Taxon\"...\n";
+	obj.ajax=new Ajax();
+	obj.ajax.setAccessToken(obj.accessToken, null);
+	obj.ajax.setHandlerErr(ErrorRespostaAjax);
+	obj.ajax.doPost(obj.sta+"/ObservedProperties", "application/json", JSON.stringify(observedProperty), EvaluateResposeCreateObservedProperty, "application/json", obj);
+}
+
+function EvaluateResposeCreateObservedProperty(data, obj)
+{
+	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
+	obj.progressArea.value+="Observed Property \"Taxon\" CREATED under id=\""+id+"\"\n";
+	StoreObservedPropertyId(id, obj);
+}
+
+function StoreObservedPropertyId(id, obj)
+{
+	obj.observedPropertyURI=id;
+	if (obj.iFunction<obj.functions.length)
+		obj.functions[obj.iFunction](obj);
+}
+
+
+
+////////////// Getting the Natusfera record.
+function GetNatusferaRecord(natObsUrl, obj)
 {
 	obj.iFunction=0;
 	var ajax_nat=new Ajax();
-	obj.progressArea.value+="Reading the Natusfera record \"" + nat + "\"...\n";
+	obj.progressArea.value+="Reading the Natusfera record \"" + natObsUrl + "\"...\n";
 	ajax_nat.setHandlerErr(ErrorRespostaAjax);
-	ajax_nat.doGet(nat, InterpretNatusferaRecord, "application/json", obj);
+	ajax_nat.doGet(natObsUrl, InterpretNatusferaRecord, "application/json", obj);
 }
 
-function InterpretNatusferaRecord(natObj, obj)
+function InterpretNatusferaRecord(natObs, obj)
 {
-	obj.natObj=natObj;
+	obj.natObs=natObs;
 	obj.progressArea.value+="Natusfera record downloaded. Extrancting information...\n";
 	obj.functions[obj.iFunction](obj);
 }
 
-// Transforming one Natusfera record into a STAplue
-function Nat2STA(nat, sta, token, progressArea)
+// Transforming one Natusfera record into a STAplus
+function Nat2STA(natObsUrl, sta, token, progressArea)
 {
-	GetNatusferaRecord(nat, {functions: [CreatePartyIfNeeded], sta: sta, accessToken: token, progressArea: progressArea})
+	GetNatusferaRecord(natObsUrl, {functions: [CreatePartyIfNeeded, CreateProjectIfNeeded, CreateHumanSensorIfNeeded, CreateTaxonObservedPropertyIfNeeded, SayDone], nat: ExtractNatEndPoint(natObsUrl), sta: sta, accessToken: token, progressArea: progressArea})
 	return false;
 }
 </script>
@@ -350,10 +556,10 @@ function Nat2STA(nat, sta, token, progressArea)
 <form name="form" onSubmit="return Nat2STA(document.form.nat.value, document.form.sta.value, document.form.token.value, document.form.progress);">
 Record in Natusfera: <input type="text" size="60" name="nat" value="https://natusfera.gbif.es/observations/313411.json"> (in JSON format)<br>
 Root of the STA+ service: <input type="text" size="60" name="sta" value="https://cos4cloud.secd.eu/staplus/v1.1"><br>
-Access Token: <input type="text" size="60" name="token" value="a5a2cc3b97d9df04e70f28a2beb11c2a5426e2e4"><br>
+Access Token: <input type="text" size="60" name="token" value="775789ec3c4cfa9dba5cd06283699ed67a068978"><br>
 <input type="submit" value="Export to STA+">
 <p>
-<textarea id="progress-area" name="progress" rows=25 cols=80>
+<textarea id="progress-area" name="progress" rows=25 cols=120>
 </textarea>
 </form>
 
