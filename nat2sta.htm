@@ -291,11 +291,13 @@ function SayDone(obj)
 	obj.linkResultDiv.innerHTML="<a target=\"_blank\" href=\"" + obj.sta + "/Groups?$filter=name eq '" + obj.natObs.uri + "'&$select=name,description,created,Observations,id&$expand=Observations($select=resultTime,result,phenomenonTime,parameters,FeatureOfInterest,Datastream;$expand=Datastream($select=Party,Sensor,Thing,License,ObservedProperty;$expand=Party($select=nickName),Sensor($select=name),Thing($select=name),License($select=name),ObservedProperty($select=name)),FeatureOfInterest($select=feature/geometry/coordinates))\">Get the STA+ representation of the Natusfera record in JSON</a>";
 }
 
-///////////////Party
+///////////////Parties
+///////////////StartingParty
 
-function CreatePartyIfNeeded(obj)
+function CreateStartingPartyIfNeeded(obj)
 {
 	obj.iFunction++;
+	obj.iIdentification=-1;
 	UpdateProgressArea(obj,"\nNatusfera user name is '"+obj.natObs.user_login+"'. Checking STAplus Parties...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
@@ -307,7 +309,7 @@ function InterpretParty(resources, obj)
 	if (resources && resources.value && resources.value.length)
 	{
 		var id=resources.value[0]["@iot.id"];
-		UpdateProgressArea(obj,"Party \"" + obj.natObs.user_login + "\" already existed under id=\""+id+"\"\n");
+		UpdateProgressArea(obj,"Party \"" + (obj.iIdentification==-1 ? obj.natObs.user_login : obj.natObs.identifications[obj.iIdentification].user.login) + "\" already existed under id=\""+id+"\"\n");
 		StorePartyId(id, obj);
 	}
 	else					
@@ -317,31 +319,63 @@ function InterpretParty(resources, obj)
 function CreateParty(obj)
 {
 	var party={
-	    "nickName": obj.natObs.user_login,
+	    "nickName": (obj.iIdentification==-1 ? obj.natObs.user_login : obj.natObs.identifications[obj.iIdentification].user.login),
 	    "role": "individual",  //"institution"
 	    "authId": "1ffffff1-1ff1-1ff1-1ff1-1ffffffffff1"
 	}	
-	UpdateProgressArea(obj,"Creating the Party \"" + obj.natObs.user_login + "\"...\n");
+	UpdateProgressArea(obj,"Creating the Party \"" + (obj.iIdentification==-1 ? obj.natObs.user_login : obj.natObs.identifications[obj.iIdentification].user.login) + "\"...\n");
 	obj.ajax=new Ajax();
 	obj.ajax.setAccessToken(obj.accessToken, null);
 	obj.ajax.setHandlerErr(ErrorResposeAjax);
-	obj.ajax.doPost(obj.sta+"/Parties", "application/json", JSON.stringify(party), EvaluateResposeCreateParty, "application/json", obj);
+	obj.ajax.doPost(obj.sta+"/Parties", "application/json", JSON.stringify(party), EvaluateResponseCreateParty, "application/json", obj);
 }
 
-function EvaluateResposeCreateParty(data, obj)
+function EvaluateResponseCreateParty(data, obj)
 {
 	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
-	UpdateProgressArea(obj,"Party \"" + obj.natObs.user_login + "\" CREATED under id=\""+id+"\"\n");
+	UpdateProgressArea(obj,"Party \"" + (obj.iIdentification==-1 ? obj.natObs.user_login : obj.natObs.identifications[obj.iIdentification].user.login) + "\" CREATED under id=\""+id+"\"\n");
 	StorePartyId(id, obj);
 }
 
 function StorePartyId(id, obj)
 {
-	obj.partyId=id;
-	if (obj.iFunction<obj.functions.length)
-		obj.functions[obj.iFunction](obj);
+	if (obj.iIdentification==-1)
+	{
+		obj.startingPartyId=id;
+		if (obj.iFunction<obj.functions.length)
+			obj.functions[obj.iFunction](obj);
+	}
+	else
+	{
+		obj.partyId[obj.iIdentification]=id;
+		obj.iIdentification++;
+		CreateOnePartyIfNeeded(obj);
+	}
 }
 
+///////////////Parties
+function CreatePartiesIfNeeded(obj)
+{
+	obj.iFunction++;
+	obj.iIdentification=0;
+	obj.partyId=[];
+	CreateOnePartyIfNeeded(obj);
+}
+
+function CreateOnePartyIfNeeded(obj)
+{
+	if (!obj.natObs.identifications || obj.iIdentification==obj.natObs.identifications.length)
+	{
+		//No hi ha observacions o s'ha acabat. Faig la següent cosa
+		if (obj.iFunction<obj.functions.length)
+			obj.functions[obj.iFunction](obj);
+		return;
+	}
+	UpdateProgressArea(obj,"\nNatusfera user name is '"+obj.natObs.identifications[obj.iIdentification].user.login+"'. Checking STAplus Parties...\n");
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorResposeAjax);
+	ajax.doGet(obj.sta+"/Parties?$select=nickName,role,id&$filter=nickName eq '"+obj.natObs.identifications[obj.iIdentification].user.login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
+}
 
 ///////////////Project
 
@@ -381,11 +415,15 @@ function GetCreationDateProject(obj)
 
 function InterpretNatProject(projects, obj)
 {
+	var d;
 	if (projects && projects.created_at)
-		CreateProject(obj, projects.created_at, projects.terms ? projects.terms : "");
+	{
+		d = new Date(projects.created_at);
+		CreateProject(obj, d.toISOString(), projects.terms ? projects.terms : "");
+	}
 	else
 	{
-		var d = new Date();
+		d = new Date();
 		CreateProject(obj, d.toISOString(), "");
 	}
 }
@@ -404,10 +442,10 @@ function CreateProject(obj, created_at, terms)
 	obj.ajax=new Ajax();
 	obj.ajax.setAccessToken(obj.accessToken, null);
 	obj.ajax.setHandlerErr(ErrorResposeAjax);
-	obj.ajax.doPost(obj.sta+"/Projects", "application/json", JSON.stringify(project), EvaluateResposeCreateProject, "application/json", obj);
+	obj.ajax.doPost(obj.sta+"/Projects", "application/json", JSON.stringify(project), EvaluateResponseCreateProject, "application/json", obj);
 }
 
-function EvaluateResposeCreateProject(data, obj)
+function EvaluateResponseCreateProject(data, obj)
 {
 	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
 	UpdateProgressArea(obj,"Project \"" + obj.natObs.project_observations[0].project.title + "\" CREATED under id=\""+id+"\"\n");
@@ -431,16 +469,16 @@ function CreateHumanSensorIfNeeded(obj)
 	UpdateProgressArea(obj,"\nChecking STAplus Sensors...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Sensors?$select=name,id&$filter=name eq 'Human Eye'", InterpretSensor, "application/json", obj);
+	ajax.doGet(obj.sta+"/Sensors?$select=name,id&$filter=name eq 'Human Eye'", InterpretHumanSensor, "application/json", obj);
 }
 
-function InterpretSensor(resources, obj)
+function InterpretHumanSensor(resources, obj)
 {
 	if (resources && resources.value && resources.value.length)
 	{
 		var id=resources.value[0]["@iot.id"];
 		UpdateProgressArea(obj,"Sensor \"Human Eye\" already existed under id=\""+id+"\"\n");
-		StoreSensorId(id, obj);
+		StoreHumanSensorId(id, obj);
 	}
 	else					
 		CreateHumanSensor(obj);
@@ -459,25 +497,78 @@ function CreateHumanSensor(obj)
 	obj.ajax=new Ajax();
 	obj.ajax.setAccessToken(obj.accessToken, null);
 	obj.ajax.setHandlerErr(ErrorResposeAjax);
-	obj.ajax.doPost(obj.sta+"/Sensors", "application/json", JSON.stringify(sensor), EvaluateResposeCreateSensor, "application/json", obj);
+	obj.ajax.doPost(obj.sta+"/Sensors", "application/json", JSON.stringify(sensor), EvaluateResponseCreateHumanSensor, "application/json", obj);
 }
 
-function EvaluateResposeCreateSensor(data, obj)
+function EvaluateResponseCreateHumanSensor(data, obj)
 {
 	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
 	UpdateProgressArea(obj,"Sensor \"Human Eye\" CREATED under id=\""+id+"\"\n");
-	StoreSensorId(id, obj);
+	StoreHumanSensorId(id, obj);
 }
 
-function StoreSensorId(id, obj)
+function StoreHumanSensorId(id, obj)
 {
-	obj.sensorId=id;
+	obj.humanSensorId=id;
 	if (obj.iFunction<obj.functions.length)
 		obj.functions[obj.iFunction](obj);
 }
 
+///////////////Camera Sensor
 
-///////////////ObservedProperty
+function CreateCameraSensorIfNeeded(obj)
+{
+	obj.iFunction++;
+	UpdateProgressArea(obj,"\nChecking STAplus Sensors...\n");
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorResposeAjax);
+	ajax.doGet(obj.sta+"/Sensors?$select=name,id&$filter=name eq 'Generic camera'", InterpretCameraSensor, "application/json", obj);
+}
+
+function InterpretCameraSensor(resources, obj)
+{
+	if (resources && resources.value && resources.value.length)
+	{
+		var id=resources.value[0]["@iot.id"];
+		UpdateProgressArea(obj, "Sensor \"Generic camera\" already existed under id=\""+id+"\"\n");
+		StoreCameraSensorId(id, obj);
+	}
+	else					
+		CreateCameraSensor(obj);
+}
+
+function CreateCameraSensor(obj)
+{
+	var sensor={
+		"name": "Generic camera",
+		"description": "A camera or a smartphone build-in camera",
+		"encodingType": "text/html",
+		"metadata": "https://en.wikipedia.org/wiki/Camera"
+	}
+
+	UpdateProgressArea(obj,"Creating the Sensor \"Generic camera\"...\n");
+	obj.ajax=new Ajax();
+	obj.ajax.setAccessToken(obj.accessToken, null);
+	obj.ajax.setHandlerErr(ErrorResposeAjax);
+	obj.ajax.doPost(obj.sta+"/Sensors", "application/json", JSON.stringify(sensor), EvaluateResponseCreateCameraSensor, "application/json", obj);
+}
+         
+function EvaluateResponseCreateCameraSensor(data, obj)
+{
+	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
+	UpdateProgressArea(obj,"Sensor \"Generic camera\" CREATED under id=\""+id+"\"\n");
+	StoreCameraSensorId(id, obj);
+}
+
+function StoreCameraSensorId(id, obj)
+{
+	obj.cameraSensorId=id;
+	if (obj.iFunction<obj.functions.length)
+		obj.functions[obj.iFunction](obj);
+}
+
+///////////////ObservedProperties
+///////////////Taxon ObservedProperty
 
 function CreateTaxonObservedPropertyIfNeeded(obj)
 {
@@ -485,16 +576,16 @@ function CreateTaxonObservedPropertyIfNeeded(obj)
 	UpdateProgressArea(obj,"\nChecking STAplus ObservedProperties...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/ObservedProperties?$select=name,definition,id&$filter=name eq 'Taxon' and definition eq 'https://www.gbif.org/dataset/d7dddbf4-2cf0-4f39-9b2a-bb099caae36c'", InterpretObservedProperty, "application/json", obj);
+	ajax.doGet(obj.sta+"/ObservedProperties?$select=name,definition,id&$filter=name eq 'Taxon' and definition eq 'https://www.gbif.org/dataset/d7dddbf4-2cf0-4f39-9b2a-bb099caae36c'", InterpretTaxonObservedProperty, "application/json", obj);
 }
 
-function InterpretObservedProperty(resources, obj)
+function InterpretTaxonObservedProperty(resources, obj)
 {
 	if (resources && resources.value && resources.value.length)
 	{
 		var id=resources.value[0]["@iot.id"];
 		UpdateProgressArea(obj,"ObserverProperty \"Taxon\" already existed under id=\""+id+"\"\n");
-		StoreObservedPropertyId(id, obj);
+		StoreTaxonObservedPropertyId(id, obj);
 	}
 	else					
 		CreateTaxonObservedProperty(obj);
@@ -512,22 +603,75 @@ function CreateTaxonObservedProperty(obj)
 	obj.ajax=new Ajax();
 	obj.ajax.setAccessToken(obj.accessToken, null);
 	obj.ajax.setHandlerErr(ErrorResposeAjax);
-	obj.ajax.doPost(obj.sta+"/ObservedProperties", "application/json", JSON.stringify(observedProperty), EvaluateResposeCreateObservedProperty, "application/json", obj);
+	obj.ajax.doPost(obj.sta+"/ObservedProperties", "application/json", JSON.stringify(observedProperty), EvaluateResponseCreateTaxonObservedProperty, "application/json", obj);
 }
 
-function EvaluateResposeCreateObservedProperty(data, obj)
+function EvaluateResponseCreateTaxonObservedProperty(data, obj)
 {
 	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
 	UpdateProgressArea(obj,"Observed Property \"Taxon\" CREATED under id=\""+id+"\"\n");
-	StoreObservedPropertyId(id, obj);
+	StoreTaxonObservedPropertyId(id, obj);
 }
 
-function StoreObservedPropertyId(id, obj)
+function StoreTaxonObservedPropertyId(id, obj)
 {
-	obj.observedPropertyId=id;
+	obj.taxonObservedPropertyId=id;
 	if (obj.iFunction<obj.functions.length)
 		obj.functions[obj.iFunction](obj);
 }
+
+///////////////Picture ObservedProperty
+
+function CreatePictureObservedPropertyIfNeeded(obj)
+{
+	obj.iFunction++;
+	UpdateProgressArea(obj,"\nChecking STAplus ObservedProperties...\n");
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorResposeAjax);
+	ajax.doGet(obj.sta+"/ObservedProperties?$select=name,definition,id&$filter=name eq 'Species picture' and definition eq 'https://www.inaturalist.org/guides/2465'", InterpretPictureObservedProperty, "application/json", obj);
+}
+
+function InterpretPictureObservedProperty(resources, obj)
+{
+	if (resources && resources.value && resources.value.length)
+	{
+		var id=resources.value[0]["@iot.id"];
+		UpdateProgressArea(obj, "ObserverProperty \"Species picture\" already existed under id=\""+id+"\"\n");
+		StorePictureObservedPropertyId(id, obj);
+	}
+	else					
+		CreatePictureObservedProperty(obj);
+}
+
+function CreatePictureObservedProperty(obj)
+{
+	var observedProperty={
+		"name": "Species picture",
+		"description": "A picture for species identification",
+		"definition": "https://www.inaturalist.org/guides/2465"
+	}
+
+	UpdateProgressArea(obj,"Creating the ObservedProperty \"Species picture\"...\n");
+	obj.ajax=new Ajax();
+	obj.ajax.setAccessToken(obj.accessToken, null);
+	obj.ajax.setHandlerErr(ErrorResposeAjax);
+	obj.ajax.doPost(obj.sta+"/ObservedProperties", "application/json", JSON.stringify(observedProperty), EvaluateResponseCreatePictureObservedProperty, "application/json", obj);
+}
+
+function EvaluateResponseCreatePictureObservedProperty(data, obj)
+{
+	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
+	UpdateProgressArea(obj,"Observed Property \"Species picture\" CREATED under id=\""+id+"\"\n");
+	StorePictureObservedPropertyId(id, obj);
+}
+
+function StorePictureObservedPropertyId(id, obj)
+{
+	obj.pictureObservedPropertyId=id;
+	if (obj.iFunction<obj.functions.length)
+		obj.functions[obj.iFunction](obj);
+}
+
 
 ///////////////License
 
@@ -591,7 +735,7 @@ function GetSTALicense(natLicense)
 function CreateLicenseIfNeeded(obj)
 {
 	obj.iFunction++;
-	UpdateProgressArea(obj,"\nNatusfera licence is '"+obj.natObs.license+"'. Checking STAplus Licenses...\n");
+	UpdateProgressArea(obj,"\nNatusfera license is '"+obj.natObs.license+"'. Checking STAplus Licenses...\n");
 	var license=GetSTALicense(obj.natObs.license);
 	if (!license)
 	{
@@ -622,10 +766,10 @@ function CreateLicense(obj)
 	obj.ajax=new Ajax();
 	obj.ajax.setAccessToken(obj.accessToken, null);
 	obj.ajax.setHandlerErr(ErrorResposeAjax);
-	obj.ajax.doPost(obj.sta+"/Licenses", "application/json", JSON.stringify(licence), EvaluateResposeCreateLicense, "application/json", obj);
+	obj.ajax.doPost(obj.sta+"/Licenses", "application/json", JSON.stringify(license), EvaluateResponseCreateLicense, "application/json", obj);
 }
 
-function EvaluateResposeCreateLicense(data, obj)
+function EvaluateResponseCreateLicense(data, obj)
 {
 	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
 	UpdateProgressArea(obj,"License \"" + obj.natObs.license + "\" CREATED under id=\""+id+"\"\n");
@@ -639,24 +783,25 @@ function StoreLicenseId(id, obj)
 		obj.functions[obj.iFunction](obj);
 }
 
-///////////////Thing
-
-function CreateHumanThingIfNeeded(obj)
+///////////////Things
+///////////////Starting Human Thing
+function CreateStartingHumanThingIfNeeded(obj)
 {
 	obj.iFunction++;
+	obj.iIdentification=-1;
 	UpdateProgressArea(obj,"\nNatusfera user name is '"+obj.natObs.user_login+"'. Checking STAplus Things...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Things?$select=name,id&$filter=name eq '"+obj.natObs.user_login+"'", InterpretThing, "application/json", obj);
+	ajax.doGet(obj.sta+"/Things?$select=name,id&$filter=name eq '"+obj.natObs.user_login+"'", InterpretHumanThing, "application/json", obj);
 }
 
-function InterpretThing(resources, obj)
+function InterpretHumanThing(resources, obj)
 {
 	if (resources && resources.value && resources.value.length)
 	{
 		var id=resources.value[0]["@iot.id"];
-		UpdateProgressArea(obj,"Thing \"" + obj.natObs.user_login + "\" already existed under id=\""+id+"\"\n");
-		StoreThingId(id, obj);
+		UpdateProgressArea(obj,"Thing \"" + (obj.iIdentification==-1 ? obj.natObs.user_login : obj.natObs.identifications[obj.iIdentification].user.login) + "\" already existed under id=\""+id+"\"\n");
+		StoreHumanThingId(id, obj);
 	}
 	else					
 		CreateHumanThing(obj);
@@ -665,30 +810,112 @@ function InterpretThing(resources, obj)
 function CreateHumanThing(obj)
 {
 	var thing={
-	    "name": obj.natObs.user_login,
+	    "name": (obj.iIdentification==-1 ? obj.natObs.user_login : obj.natObs.identifications[obj.iIdentification].user.login),
 	    "description": "Human as a sensor"
 	}	
-	UpdateProgressArea(obj,"Creating the Thing \"" + obj.natObs.user_login + "\"...\n");
+	UpdateProgressArea(obj,"Creating the Thing \"" + thing.name + "\"...\n");
 	obj.ajax=new Ajax();
 	obj.ajax.setAccessToken(obj.accessToken, null);
 	obj.ajax.setHandlerErr(ErrorResposeAjax);
-	obj.ajax.doPost(obj.sta+"/Things", "application/json", JSON.stringify(thing), EvaluateResposeCreateThing, "application/json", obj);
+	obj.ajax.doPost(obj.sta+"/Things", "application/json", JSON.stringify(thing), EvaluateResponseCreateHumanThing, "application/json", obj);
 }
 
-function EvaluateResposeCreateThing(data, obj)
+function EvaluateResponseCreateHumanThing(data, obj)
 {
 	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
-	UpdateProgressArea(obj,"Thing \"" + obj.natObs.user_login + "\" CREATED under id=\""+id+"\"\n");
-	StoreThingId(id, obj);
+	UpdateProgressArea(obj,"Thing \"" + (obj.iIdentification==-1 ? obj.natObs.user_login : obj.natObs.identifications[obj.iIdentification].user.login) + "\" CREATED under id=\""+id+"\"\n");
+	StoreHumanThingId(id, obj);
 }
 
-function StoreThingId(id, obj)
+function StoreHumanThingId(id, obj)
 {
-	obj.thingId=id;
+	if (obj.iIdentification==-1)
+	{
+		obj.startingHumanThingId=id;
+		if (obj.iFunction<obj.functions.length)
+			obj.functions[obj.iFunction](obj);
+	}
+	else
+	{
+		obj.humanThingId[obj.iIdentification]=id;
+		obj.iIdentification++;
+		CreateOneHumanThingIfNeeded(obj);
+	}
+}
+
+///////////////Human Things
+function CreateHumanThingsIfNeeded(obj)
+{
+	obj.iFunction++;
+	obj.iIdentification=0;
+	obj.humanThingId=[];
+	CreateOneHumanThingIfNeeded(obj);
+}
+
+function CreateOneHumanThingIfNeeded(obj)
+{
+	if (!obj.natObs.identifications || obj.iIdentification==obj.natObs.identifications.length)
+	{
+		//No hi ha observacions o s'ha acabat. Faig la següent cosa
+		if (obj.iFunction<obj.functions.length)
+			obj.functions[obj.iFunction](obj);
+		return;
+	}
+	UpdateProgressArea(obj,"\nNatusfera user name is '"+obj.natObs.identifications[obj.iIdentification].user.login+"'. Checking STAplus Things...\n");
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorResposeAjax);
+	ajax.doGet(obj.sta+"/Things?$select=name,id&$filter=name eq '"+obj.natObs.identifications[obj.iIdentification].user.login+"'", InterpretHumanThing, "application/json", obj);
+}
+
+///////////////Camera Thing
+
+function CreateCameraThingIfNeeded(obj)
+{
+	obj.iFunction++;
+	UpdateProgressArea(obj,"\nNatusfera user name is '"+obj.natObs.user_login+"'. Checking STAplus Camera Things...\n");
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorResposeAjax);
+	ajax.doGet(obj.sta+"/Things?$select=name,id&$filter=name eq 'Camera of "+obj.natObs.user_login+"'", InterpretCameraThing, "application/json", obj);
+}
+
+function InterpretCameraThing(resources, obj)
+{
+	if (resources && resources.value && resources.value.length)
+	{
+		var id=resources.value[0]["@iot.id"];
+		UpdateProgressArea(obj,"Thing \"Camera of " + obj.natObs.user_login + "\" already existed under id=\""+id+"\"\n");
+		StoreCameraThingId(id, obj);
+	}
+	else					
+		CreateCameraThing(obj);
+}
+
+function CreateCameraThing(obj)
+{
+	var thing={
+	    "name": "Camera of " + obj.natObs.user_login,
+	    "description": "Camera of " + obj.natObs.user_login + "as a sensor to identify a species"
+	}	
+	UpdateProgressArea(obj, "Creating the Thing \"Camera of " + obj.natObs.user_login + "\"...\n");
+	obj.ajax=new Ajax();
+	obj.ajax.setAccessToken(obj.accessToken, null);
+	obj.ajax.setHandlerErr(ErrorResposeAjax);
+	obj.ajax.doPost(obj.sta+"/Things", "application/json", JSON.stringify(thing), EvaluateResponseCreateCameraThing, "application/json", obj);
+}
+
+function EvaluateResponseCreateCameraThing(data, obj)
+{
+	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
+	UpdateProgressArea(obj,"Thing \"Camera of " + obj.natObs.user_login + "\" CREATED under id=\""+id+"\"\n");
+	StoreCameraThingId(id, obj);
+}
+
+function StoreCameraThingId(id, obj)
+{
+	obj.cameraThingId=id;
 	if (obj.iFunction<obj.functions.length)
 		obj.functions[obj.iFunction](obj);
 }
-
 
 ///////////////FeatureOfInterest
 
@@ -731,10 +958,10 @@ function CreateFeatureOfInterest(obj)
 	obj.ajax=new Ajax();
 	obj.ajax.setAccessToken(obj.accessToken, null);
 	obj.ajax.setHandlerErr(ErrorResposeAjax);
-	obj.ajax.doPost(obj.sta+"/FeaturesOfInterest", "application/json", JSON.stringify(featureOfInterest), EvaluateResposeCreateFeatureOfInterest, "application/json", obj);
+	obj.ajax.doPost(obj.sta+"/FeaturesOfInterest", "application/json", JSON.stringify(featureOfInterest), EvaluateResponseCreateFeatureOfInterest, "application/json", obj);
 }
 
-function EvaluateResposeCreateFeatureOfInterest(data, obj)
+function EvaluateResponseCreateFeatureOfInterest(data, obj)
 {
 	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
 	UpdateProgressArea(obj,"FeatureOfInterest longitude: "+obj.natObs.longitude+ " latitude: "+obj.natObs.latitude+" CREATED under id=\""+id+"\"\n");
@@ -777,16 +1004,16 @@ function CreateGroup(obj)
 	var group={
 	    "name": obj.natObs.uri,
 	    "description": "Observation of a " + obj.natObs.species_guess,
-	    "created": obj.natObs.created_at
+	    "created": obj.natObs.created_at_utc
 	}	
 	UpdateProgressArea(obj,"Creating the Group \"" + obj.natObs.uri + "\"...\n");
 	obj.ajax=new Ajax();
 	obj.ajax.setAccessToken(obj.accessToken, null);
 	obj.ajax.setHandlerErr(ErrorResposeAjax);
-	obj.ajax.doPost(obj.sta+"/Groups", "application/json", JSON.stringify(group), EvaluateResposeCreateGroup, "application/json", obj);
+	obj.ajax.doPost(obj.sta+"/Groups", "application/json", JSON.stringify(group), EvaluateResponseCreateGroup, "application/json", obj);
 }
 
-function EvaluateResposeCreateGroup(data, obj)
+function EvaluateResponseCreateGroup(data, obj)
 {
 	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
 	UpdateProgressArea(obj,"Group \"" + obj.natObs.uri + "\" CREATED under id=\""+id+"\"\n");
@@ -800,32 +1027,33 @@ function StoreGroupId(id, obj)
 		obj.functions[obj.iFunction](obj);
 }
 
+///////////////Datastreams
+///////////////Community Agreed Taxon Datastream
 
-///////////////Datstream
-
-function CreateDatastreamIfNeeded(obj)
+function CreateCommunityTaxonDatastreamIfNeeded(obj)
 {
 	obj.iFunction++;
+	obj.iIdentification=-1;
 	UpdateProgressArea(obj,"\nChecking STAplus Datastreams...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.partyId + "'),Sensor($select=id;$filter=id eq '" + obj.sensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.observedPropertyId + "'),License($select=id;$filter=id eq '" + obj.licenseId + "'),Thing($select=id;$filter=id eq '" + obj.thingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier'";
-	ajax.doGet(url, InterpretDatastream, "application/json", obj);
+	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,name,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.startingPartyId + "'),Sensor($select=id;$filter=id eq '" + obj.humanSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.taxonObservedPropertyId + "'),License($select=id;$filter=id eq '" + obj.licenseId + "'),Thing($select=id;$filter=id eq '" + obj.startingHumanThingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Community Agreed Species Identification ("+obj.natObs.user_login+", Taxon)'";
+	ajax.doGet(url, InterpretCommunityTaxonDatastream, "application/json", obj);
 }
 
-function InterpretDatastream(resources, obj)
+function InterpretCommunityTaxonDatastream(resources, obj)
 {
 	if (resources && resources.value && resources.value.length)
 	{
 		var id=resources.value[0]["@iot.id"];
 		UpdateProgressArea(obj,"Datastream already existed under id=\""+id+"\"\n");
-		StoreDatastreamId(id, obj);
+		StoreCommunityTaxonDatastreamId(id, obj);
 	}
 	else					
-		CreateDatastream(obj);
+		CreateCommunityTaxonDatastream(obj);
 }
 
-function CreateDatastream(obj)
+function CreateCommunityTaxonDatastream(obj)
 {
 	var datastream={
 		"unitOfMeasurement":{
@@ -834,95 +1062,360 @@ function CreateDatastream(obj)
 			"definition": "https://www.gbif.org/species"
 		},
 		"observationType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement",
-		"name": "GBIF Species Identification",
-		"description": "Observations of species identification of the Natusfera user '"+obj.natObs.user_login+"'" + (obj.projectId ? " in the project '" + obj.natObs.project_observations[0].project.title + "'" : "") + " from the eyes of a human acting as a sersor observing the property 'taxon' under the license '" + obj.natObs.license + "'.",
-		"Party": { "@iot.id": obj.partyId },
-		"Sensor": { "@iot.id": obj.sensorId },
-		"ObservedProperty": { "@iot.id": obj.observedPropertyId },
+		"name": "Community Agreed Species Identification ("+obj.natObs.user_login+", Taxon)",
+		"description": "Agreed Observations of species identification started by the Natusfera user '"+obj.natObs.user_login+"'" + (obj.projectId ? " in the project '" + obj.natObs.project_observations[0].project.title + "'" : "") + " from the eyes of a human acting as a sersor observing the property 'taxon' under the license '" + obj.natObs.license + "'.",
+		"Party": { "@iot.id": obj.startingPartyId },
+		"Sensor": { "@iot.id": obj.humanSensorId },
+		"ObservedProperty": { "@iot.id": obj.taxonObservedPropertyId },
 		"License": { "@iot.id": obj.licenseId },
-		"Thing": { "@iot.id": obj.thingId },
+		"Thing": { "@iot.id": obj.startingHumanThingId },
 	};
 	if (obj.projectId)
 		datastream.Project={ "@iot.id": obj.projectId };
 
-	UpdateProgressArea(obj,"Creating the Datastream for \"GBIF Species Identification\"...\n");
+	UpdateProgressArea(obj,"Creating the Datastream for \"Community Agreed Species Identification\"...\n");
 	obj.ajax=new Ajax();
 	obj.ajax.setAccessToken(obj.accessToken, null);
 	obj.ajax.setHandlerErr(ErrorResposeAjax);
-	obj.ajax.doPost(obj.sta+"/Datastreams", "application/json", JSON.stringify(datastream), EvaluateResposeCreateDatastream, "application/json", obj);
+	obj.ajax.doPost(obj.sta+"/Datastreams", "application/json", JSON.stringify(datastream), EvaluateResponseCreateCommunityTaxonDatastream, "application/json", obj);
 }
 
-function EvaluateResposeCreateDatastream(data, obj)
+function EvaluateResponseCreateCommunityTaxonDatastream(data, obj)
 {
 	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
-	UpdateProgressArea(obj,"Datastream for GBIF Species Identification CREATED under id=\""+id+"\"\n");
-	StoreDatastreamId(id, obj);
+	UpdateProgressArea(obj,"Datastream for Community Agreed Species Identification CREATED under id=\""+id+"\"\n");
+	StoreCommunityTaxonDatastreamId(id, obj);
 }
 
-function StoreDatastreamId(id, obj)
+function StoreCommunityTaxonDatastreamId(id, obj)
 {
-	obj.datastreamId=id;
+	obj.communityTaxonDatastreamId=id;
 	if (obj.iFunction<obj.functions.length)
 		obj.functions[obj.iFunction](obj);
 }
 
+///////////////Taxon Datastream
 
-///////////////Observation
-
-function CreateObservationIfNeeded(obj)
+function CreateTaxonDatastreamsIfNeeded(obj)
 {
 	obj.iFunction++;
-	UpdateProgressArea(obj,"\nNatusfera taxon id is '"+obj.natObs.taxon_id+"' (" + obj.natObs.species_guess + "). Checking STAplus Observations...\n");
-	var ajax=new Ajax();
-	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,id&$filter=result eq "+obj.natObs.taxon_id+" and resultTime eq " + obj.natObs.created_at_utc + " and phenomenonTime eq " + obj.natObs.time_observed_at_utc + "", InterpretObservation, "application/json", obj);
+	obj.iIdentification=0;
+	obj.taxonDatastreamId=[];
+	CreateOneTaxonDatastreamIfNeeded(obj);
 }
 
-function InterpretObservation(resources, obj)
+function CreateOneTaxonDatastreamIfNeeded(obj)
+{
+	if (!obj.natObs.identifications || obj.iIdentification==obj.natObs.identifications.length)
+	{
+		//No hi ha observacions o s'ha acabat. Faig la següent cosa
+		if (obj.iFunction<obj.functions.length)
+			obj.functions[obj.iFunction](obj);
+		return;
+	}
+	UpdateProgressArea(obj,"\nChecking STAplus Datastreams...\n");
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorResposeAjax);
+	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +
+			"&$expand=Party($select=id;$filter=id eq '" + obj.partyId[obj.iIdentification] + "'),Sensor($select=id;$filter=id eq '" + obj.humanSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.taxonObservedPropertyId + "'),License($select=id;$filter=id eq '" + obj.licenseId + "'),Thing($select=id;$filter=id eq '" + obj.humanThingId[obj.iIdentification] + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Species Identification ("+obj.natObs.identifications[obj.iIdentification].user.login+", Taxon)'";
+	ajax.doGet(url, InterpretTaxonDatastream, "application/json", obj);
+}
+
+function InterpretTaxonDatastream(resources, obj)
 {
 	if (resources && resources.value && resources.value.length)
 	{
 		var id=resources.value[0]["@iot.id"];
-		UpdateProgressArea(obj,"Observation \"" + obj.natObs.taxon_id + "\" already existed under id=\""+id+"\"\n");
-		StoreObservationId(id, obj);
+		UpdateProgressArea(obj,"Datastream already existed under id=\""+id+"\"\n");
+		StoreTaxonDatastreamId(id, obj);
 	}
 	else					
-		CreateObservation(obj);
+		CreateTaxonDatastream(obj);
 }
 
-function CreateObservation(obj)
+function CreateTaxonDatastream(obj)
 {
-	var observation={
-		"result": obj.natObs.taxon_id,
-		"resultTime": obj.natObs.created_at_utc, 
-		"phenomenonTime": obj.natObs.time_observed_at_utc,
-		"FeatureOfInterest": { "@iot.id": obj.featureOfInterestId },
-		"Groups": [{ "@iot.id": obj.groupId }],
-		"Datastream": { "@iot.id": obj.datastreamId },
-		"parameters": {"species_guess" : obj.natObs.species_guess}
-	}
-	for (var i=0; i<obj.natObs.observation_field_values.length; i++)
-		observation.parameters[obj.natObs.observation_field_values[i].observation_field.name]=obj.natObs.observation_field_values[i].value;
+	var datastream={
+		"unitOfMeasurement":{
+			"name":"Identifier",
+			"symbol": "",
+			"definition": "https://www.gbif.org/species"
+		},
+		"observationType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement",
+		"name": "Species Identification ("+obj.natObs.identifications[obj.iIdentification].user.login+", Taxon)",
+		"description": "Observations of species identification of the Natusfera user '"+obj.natObs.identifications[obj.iIdentification].user.login+"'" + (obj.projectId ? " in the project '" + obj.natObs.project_observations[0].project.title + "'" : "") + " from the eyes of a human acting as a sersor observing the property 'taxon' under the license '" + obj.natObs.license + "'.",
+		"Party": { "@iot.id": obj.partyId[obj.iIdentification] },
+		"Sensor": { "@iot.id": obj.humanSensorId },
+		"ObservedProperty": { "@iot.id": obj.taxonObservedPropertyId },
+		"License": { "@iot.id": obj.licenseId },
+		"Thing": { "@iot.id": obj.humanThingId[obj.iIdentification] },
+	};
+	if (obj.projectId)
+		datastream.Project={ "@iot.id": obj.projectId };
 
-	UpdateProgressArea(obj,"Creating the Observation \"" + obj.natObs.taxon_id + "\"...\n");
+	UpdateProgressArea(obj,"Creating the Datastream for \"Species Identification\"...\n");
 	obj.ajax=new Ajax();
 	obj.ajax.setAccessToken(obj.accessToken, null);
 	obj.ajax.setHandlerErr(ErrorResposeAjax);
-	obj.ajax.doPost(obj.sta+"/Observations", "application/json", JSON.stringify(observation), EvaluateResposeCreateObservation, "application/json", obj);
+	obj.ajax.doPost(obj.sta+"/Datastreams", "application/json", JSON.stringify(datastream), EvaluateResponseCreateTaxonDatastream, "application/json", obj);
 }
 
-function EvaluateResposeCreateObservation(data, obj)
+function EvaluateResponseCreateTaxonDatastream(data, obj)
 {
 	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
-	UpdateProgressArea(obj,"Observation \"" + obj.natObs.taxon_id + "\" CREATED under id=\""+id+"\"\n");
-	StoreObservationId(id, obj);
+	UpdateProgressArea(obj,"Datastream for Species Identification CREATED under id=\""+id+"\"\n");
+	StoreTaxonDatastreamId(id, obj);
 }
 
-function StoreObservationId(id, obj)
+function StoreTaxonDatastreamId(id, obj)
 {
-	obj.observationId=id;
+	obj.taxonDatastreamId[obj.iIdentification]=id;
+	obj.iIdentification++;
+	CreateOneTaxonDatastreamIfNeeded(obj);
+}
+
+///////////////Picture Datastream
+
+function CreatePictureDatastreamIfNeeded(obj)
+{
+	obj.iFunction++;
+	UpdateProgressArea(obj,"\nChecking STAplus Datastreams...\n");
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorResposeAjax);
+	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.startingPartyId + "'),Sensor($select=id;$filter=id eq '" + obj.cameraSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.pictureObservedPropertyId + "'),License($select=id;$filter=id eq '" + obj.licenseId + "'),Thing($select=id;$filter=id eq '" + obj.cameraThingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'N/A' and name eq 'Pictures for Species Identification ("+obj.natObs.user_login+", Taxon)'";
+	ajax.doGet(url, InterpretPictureDatastream, "application/json", obj);
+}
+
+function InterpretPictureDatastream(resources, obj)
+{
+	if (resources && resources.value && resources.value.length)
+	{
+		var id=resources.value[0]["@iot.id"];
+		UpdateProgressArea(obj,"Datastream already existed under id=\""+id+"\"\n");
+		StorePictureDatastreamId(id, obj);
+	}
+	else					
+		CreatePictureDatastream(obj);
+}
+
+function CreatePictureDatastream(obj)
+{
+	var datastream={
+		"unitOfMeasurement":{
+			"name":"N/A",
+			"symbol": "",
+			"definition": "N/A"
+		},
+		"observationType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement",
+		"name": "Pictures for Species Identification ("+obj.natObs.user_login+", Taxon)",
+		"description": "Observations of species pictures for identification of the Natusfera user '"+obj.natObs.user_login+"'" + (obj.projectId ? " in the project '" + obj.natObs.project_observations[0].project.title + "'" : "") + " from the camera sersor observing the property 'taxon' under the license '" + obj.natObs.license + "'.",
+		"Party": { "@iot.id": obj.startingPartyId },
+		"Sensor": { "@iot.id": obj.cameraSensorId },
+		"ObservedProperty": { "@iot.id": obj.pictureObservedPropertyId },
+		"License": { "@iot.id": obj.licenseId },
+		"Thing": { "@iot.id": obj.cameraThingId },
+	};
+	if (obj.projectId)
+		datastream.Project={ "@iot.id": obj.projectId };
+
+	UpdateProgressArea(obj,"Creating the Datastream for \"Pictures for Species Identification\"...\n");
+	obj.ajax=new Ajax();
+	obj.ajax.setAccessToken(obj.accessToken, null);
+	obj.ajax.setHandlerErr(ErrorResposeAjax);
+	obj.ajax.doPost(obj.sta+"/Datastreams", "application/json", JSON.stringify(datastream), EvaluateResponseCreatePictureDatastream, "application/json", obj);
+}
+
+function EvaluateResponseCreatePictureDatastream(data, obj)
+{
+	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
+	UpdateProgressArea(obj,"Datastream for Pictures for Species Identification CREATED under id=\""+id+"\"\n");
+	StorePictureDatastreamId(id, obj);
+}
+
+function StorePictureDatastreamId(id, obj)
+{
+	obj.pictureDatastreamId=id;
 	if (obj.iFunction<obj.functions.length)
 		obj.functions[obj.iFunction](obj);
+}
+
+///////////////Observations
+///////////////Community Taxon Observation
+
+function CreateCommunityTaxonObservationIfNeeded(obj)
+{
+	obj.iFunction++;
+	UpdateProgressArea(obj,"\nNatusfera taxon id is '"+obj.natObs.community_taxon_id+"' (" + obj.natObs.species_guess + "). Checking STAplus Observations...\n");
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorResposeAjax);
+	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id;$filter=id eq '"+obj.communityTaxonDatastreamId+"')&$filter=result eq "+obj.natObs.community_taxon_id+" and resultTime eq " + obj.natObs.created_at_utc + " and phenomenonTime eq " + obj.natObs.time_observed_at_utc + "", InterpretTaxonObservation, "application/json", obj);
+}
+
+function InterpretTaxonObservation(resources, obj)
+{
+	if (resources && resources.value && resources.value.length)
+	{
+		var id=resources.value[0]["@iot.id"];
+		UpdateProgressArea(obj,"Observation \"" + (obj.iIdentification==-1 ? obj.natObs.community_taxon_id : obj.natObs.identifications[obj.iIdentification].taxon_id) + "\" already existed under id=\""+id+"\"\n");
+		StoreTaxonObservationId(id, obj);
+	}
+	else					
+		CreateTaxonObservation(obj);
+}
+
+function CreateTaxonObservation(obj)
+{
+	var d, created_at;
+	if (obj.iIdentification==-1)
+		 created_at=obj.natObs.created_at_utc;
+	else
+	{
+		d = new Date(obj.natObs.identifications[obj.iIdentification].created_at);
+		created_at=d.toISOString();
+	}
+
+	var observation={
+		"result": (obj.iIdentification==-1 ? obj.natObs.community_taxon_id : obj.natObs.identifications[obj.iIdentification].taxon_id),
+		"resultTime": created_at, 
+		"phenomenonTime": obj.natObs.time_observed_at_utc,
+		"FeatureOfInterest": { "@iot.id": obj.featureOfInterestId },
+		"Groups": [{ "@iot.id": obj.groupId }]
+	};
+	if (obj.iIdentification==-1)
+	{
+		observation.Datastream={ "@iot.id": obj.communityTaxonDatastreamId };
+		observation.parameters={"species_guess" : obj.natObs.species_guess, 
+					"quality_grade" : obj.natObs.quality_grade};
+		for (var i=0; i<obj.natObs.observation_field_values.length; i++)
+			observation.parameters[obj.natObs.observation_field_values[i].observation_field.name]=obj.natObs.observation_field_values[i].value;
+	}
+	else
+		observation.Datastream={ "@iot.id": obj.taxonDatastreamId[obj.iIdentification] };
+
+	UpdateProgressArea(obj,"Creating the Observation \"" + (obj.iIdentification==-1 ? obj.natObs.community_taxon_id : obj.natObs.identifications[obj.iIdentification].taxon_id) + "\"...\n");
+	obj.ajax=new Ajax();
+	obj.ajax.setAccessToken(obj.accessToken, null);
+	obj.ajax.setHandlerErr(ErrorResposeAjax);
+	obj.ajax.doPost(obj.sta+"/Observations", "application/json", JSON.stringify(observation), EvaluateResponseCreateTaxonObservation, "application/json", obj);
+}
+
+function EvaluateResponseCreateTaxonObservation(data, obj)
+{
+	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
+	UpdateProgressArea(obj,"Observation \"" + (obj.iIdentification==-1 ? obj.natObs.community_taxon_id : obj.natObs.identifications[obj.iIdentification].taxon_id) + "\" CREATED under id=\""+id+"\"\n");
+	StoreTaxonObservationId(id, obj);
+}
+
+function StoreTaxonObservationId(id, obj)
+{
+	if (obj.iIdentification==-1)
+	{
+		obj.communityObservationId=id;
+		if (obj.iFunction<obj.functions.length)
+			obj.functions[obj.iFunction](obj);
+	}
+	else
+	{
+		obj.observationId[obj.iIdentification]=id;
+		obj.iIdentification++;
+		CreateOneTaxonObservationIfNeeded(obj);
+	}
+}
+
+///////////////Taxon Observations
+function CreateTaxonObservationsIfNeeded(obj)
+{
+	obj.iFunction++;
+	obj.iIdentification=0;
+	obj.observationId=[];
+	CreateOneTaxonObservationIfNeeded(obj);
+}
+
+function CreateOneTaxonObservationIfNeeded(obj)
+{
+	if (!obj.natObs.identifications || obj.iIdentification==obj.natObs.identifications.length)
+	{
+		//No hi ha observacions o s'ha acabat. Faig la següent cosa
+		if (obj.iFunction<obj.functions.length)
+			obj.functions[obj.iFunction](obj);
+		return;
+	}
+	UpdateProgressArea(obj,"\nNatusfera taxon_id is '"+obj.natObs.identifications[obj.iIdentification].taxon_id+"'. Checking STAplus Observations...\n");
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorResposeAjax);
+	var d = new Date(obj.natObs.identifications[obj.iIdentification].created_at);
+	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id;$filter=id eq '"+obj.taxonDatastreamId[obj.iIdentification]+"')&$filter=result eq " + obj.natObs.identifications[obj.iIdentification].taxon_id + " and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + obj.natObs.time_observed_at_utc + "", InterpretTaxonObservation, "application/json", obj);
+}
+
+///////////////Picture Observation
+
+function CreatePictureObservationsIfNeeded(obj)
+{
+	obj.iFunction++;
+	obj.iPictureObservation=0;
+	obj.pictureObservationId=[];
+	CreateOnePictureObservationIfNeeded(obj);
+}
+
+function CreateOnePictureObservationIfNeeded(obj)
+{
+	if (!obj.natObs.observation_photos || obj.iPictureObservation==obj.natObs.observation_photos.length)
+	{
+		//No hi ha fotos o s'ha acabat. Faig la següent cosa
+		if (obj.iFunction<obj.functions.length)
+			obj.functions[obj.iFunction](obj);
+		return;
+	}
+	UpdateProgressArea(obj,"\nNatusfera picture link is '"+obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url+"' (" + obj.natObs.observation_photos[obj.iPictureObservation].photo.native_page_url + "). Checking STAplus Observations...\n");
+	var d = new Date(obj.natObs.observation_photos[obj.iPictureObservation].photo.created_at);	
+	var ajax=new Ajax();
+	ajax.setHandlerErr(ErrorResposeAjax);
+	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id;$filter=id eq '"+obj.pictureDatastreamId+"')&$filter=result eq '"+obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url+"' and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + obj.natObs.time_observed_at_utc + "", InterpretPictureObservation, "application/json", obj);
+}
+
+function InterpretPictureObservation(resources, obj)
+{
+	if (resources && resources.value && resources.value.length)
+	{
+		var id=resources.value[0]["@iot.id"];
+		UpdateProgressArea(obj,"Observation picture link \"" + obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url + "\" already existed under id=\""+id+"\"\n");
+		StorePictureObservationId(id, obj);
+	}
+	else					
+		CreatePictureObservation(obj);
+}
+
+function CreatePictureObservation(obj)
+{
+	var d = new Date(obj.natObs.observation_photos[obj.iPictureObservation].photo.created_at);	
+	var observation={
+		"result": obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url,
+		"resultTime": d.toISOString(), 
+		"phenomenonTime": obj.natObs.time_observed_at_utc,
+		"FeatureOfInterest": { "@iot.id": obj.featureOfInterestId },
+		"Groups": [{ "@iot.id": obj.groupId }],
+		"Datastream": { "@iot.id": obj.pictureDatastreamId },
+		"parameters": {"species_guess" : obj.natObs.species_guess}
+	}
+	UpdateProgressArea(obj,"Creating the Observation picture link \"" + obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url + "\"...\n");
+	obj.ajax=new Ajax();
+	obj.ajax.setAccessToken(obj.accessToken, null);
+	obj.ajax.setHandlerErr(ErrorResposeAjax);
+	obj.ajax.doPost(obj.sta+"/Observations", "application/json", JSON.stringify(observation), EvaluateResponseCreatePictureObservation, "application/json", obj);
+}
+
+function EvaluateResponseCreatePictureObservation(data, obj)
+{
+	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
+	UpdateProgressArea(obj,"Observation picture link \"" + obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url + "\" CREATED under id=\""+id+"\"\n");
+	StorePictureObservationId(id, obj);
+}
+
+function StorePictureObservationId(id, obj)
+{
+	obj.pictureObservationId[obj.iPictureObservation]=id;
+	obj.iPictureObservation++;
+	CreateOnePictureObservationIfNeeded(obj)
 }
 
 
@@ -939,14 +1432,38 @@ function GetNatusferaRecord(natObsUrl, obj)
 function InterpretNatusferaRecord(natObs, obj)
 {
 	obj.natObs=natObs;
-	UpdateProgressArea(obj,"Natusfera record downloaded. Extrancting information...\n");
+	UpdateProgressArea(obj,"Natusfera record downloaded. Extracting information...\n");
 	obj.functions[obj.iFunction](obj);
 }
 
 // Transforming one Natusfera record into a STAplus
 function Nat2STA(natObsUrl, sta, token, progressArea, linkResultDiv)
 {
-	GetNatusferaRecord(natObsUrl, {functions: [CreatePartyIfNeeded, CreateProjectIfNeeded, CreateHumanSensorIfNeeded, CreateTaxonObservedPropertyIfNeeded, CreateLicenseIfNeeded, CreateHumanThingIfNeeded, CreateFeatureOfInterestIfNeeded, CreateGroupIfNeeded, CreateDatastreamIfNeeded, CreateObservationIfNeeded, SayDone], nat: ExtractNatEndPoint(natObsUrl), sta: sta, accessToken: token, progressArea: progressArea, linkResultDiv: linkResultDiv})
+	GetNatusferaRecord(natObsUrl, {functions: [CreateStartingPartyIfNeeded, 
+			CreateProjectIfNeeded, 
+			CreateHumanSensorIfNeeded, 
+			CreateTaxonObservedPropertyIfNeeded, 
+			CreateLicenseIfNeeded, 
+			CreateStartingHumanThingIfNeeded, 
+			CreateFeatureOfInterestIfNeeded, 
+			CreateGroupIfNeeded, 
+			CreateCommunityTaxonDatastreamIfNeeded,
+			CreateCommunityTaxonObservationIfNeeded, 
+			CreateCameraSensorIfNeeded, 
+			CreatePictureObservedPropertyIfNeeded, 
+			CreateCameraThingIfNeeded, 
+			CreatePictureDatastreamIfNeeded,
+			CreatePictureObservationsIfNeeded, 
+			CreateHumanThingsIfNeeded,
+			CreatePartiesIfNeeded,
+			CreateTaxonDatastreamsIfNeeded,
+			CreateTaxonObservationsIfNeeded,
+			SayDone], 
+		nat: ExtractNatEndPoint(natObsUrl), 
+		sta: sta, 
+		accessToken: token, 
+		progressArea: progressArea, 
+		linkResultDiv: linkResultDiv})
 	return false;
 }
 </script>
@@ -958,8 +1475,9 @@ function Nat2STA(natObsUrl, sta, token, progressArea, linkResultDiv)
 <form name="form" onSubmit="return Nat2STA(document.form.nat.value, document.form.sta.value, document.form.token.value, document.form.progress, document.getElementById('link_result'));">
 Record in Natusfera: <input type="text" size="60" name="nat" value="https://natusfera.gbif.es/observations/313411.json"> (in JSON format)<br>
 Root of the STA+ service: <input type="text" size="60" name="sta" value="https://cos4cloud.secd.eu/staplus/v1.1"><br>
-Access Token: <input type="text" size="60" name="token" value="b3aff1ebfa5dd72d23218c66020c5a4b76f6668f"><br>
+Access Token: <input type="text" size="60" name="token" value="97adaedd9ca4992bbfd1b93e777fd8b1d85ec3f3"><br>
 <input type="submit" value="Export to STA+">
+<input type="button" value="Export to STA+ debug" onClick="return Nat2STA(document.form.nat.value, document.form.sta.value, document.form.token.value, document.form.progress, document.getElementById('link_result'));">
 <p>
 <textarea id="progress-area" name="progress" rows=25 cols=120>
 </textarea>
