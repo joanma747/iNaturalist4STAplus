@@ -268,9 +268,21 @@ function ErrorResposeAjax(resp, obj)
 
 function ExtractIdFromURL(url)
 {
-	if (-1==url.indexOf("'") || -1==url.indexOf("'", url.indexOf("'")+1))
+var id;
+	if (-1!=url.indexOf("('") && -1!=url.indexOf("')", url.indexOf("('")+2))
+	{
+		id=url.substring(url.indexOf("('")+2,url.indexOf("')",url.indexOf("('")+2));
+		if (id==+id)  //Is it a numerical id?  /inspired in https://stackoverflow.com/questions/20169217/how-to-write-isnumber-in-javascript
+			return +id;  //returns a number
+		return id;  //returns a string
+	}
+	if (-1!=url.indexOf("(") && -1!=url.indexOf(")", url.indexOf("(")+1))
+	{
+		id=url.substring(url.indexOf("(")+1,url.indexOf(")",url.indexOf("(")+1));
+		return +id;  //returns a number
+	}
+	else
 		return url;
-	return url.substring(url.indexOf("'")+1,url.indexOf("'",url.indexOf("'")+1));
 }
 
 function ExtractNatEndPoint(url)
@@ -287,8 +299,11 @@ function ExtractNatEndPoint(url)
 
 function SayDone(obj)
 {
+	obj.iFunction++;
 	UpdateProgressArea(obj,"\nDone!\n");
-	obj.linkResultDiv.innerHTML="<a target=\"_blank\" href=\"" + obj.sta + "/Groups?$filter=name eq '" + obj.natObs.uri + "'&$select=name,description,created,Observations,id&$expand=Observations($select=resultTime,result,phenomenonTime,parameters,FeatureOfInterest,Datastream;$expand=Datastream($select=Party,Sensor,Thing,License,ObservedProperty;$expand=Party($select=nickName),Sensor($select=name),Thing($select=name),License($select=name),ObservedProperty($select=name)),FeatureOfInterest($select=feature/geometry/coordinates))\">Get the STA+ representation of the Natusfera record in JSON</a>";
+	obj.linkResultDiv.innerHTML+="<a target=\"_blank\" href=\"" + obj.sta + "/Groups?$filter=name eq '" + obj.natObs.uri + "'&$select=name,description,creationTime,Observations,id&$expand=Observations($select=resultTime,result,phenomenonTime,parameters,FeatureOfInterest,Datastream;$expand=Datastream($select=Party,Sensor,Thing,License,ObservedProperty;$expand=Party($select=name),Sensor($select=name),Thing($select=name),License($select=name),ObservedProperty($select=name)),FeatureOfInterest($select=feature/geometry/coordinates))\">Get the STA+ representation of the Natusfera record " + obj.natObsUrl + " in JSON</a><br>";
+	if (obj.iFunction<obj.functions.length)
+		obj.functions[obj.iFunction](obj);
 }
 
 ///////////////Parties
@@ -301,7 +316,7 @@ function CreateStartingPartyIfNeeded(obj)
 	UpdateProgressArea(obj,"\nNatusfera user name is '"+obj.natObs.user_login+"'. Checking STAplus Parties...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Parties?$select=nickName,role,id&$filter=nickName eq '"+obj.natObs.user_login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
+	ajax.doGet(obj.sta+"/Parties?$select=name,role,id&$filter=name eq '"+obj.natObs.user_login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
 }
 
 function InterpretParty(resources, obj)
@@ -319,7 +334,7 @@ function InterpretParty(resources, obj)
 function CreateParty(obj)
 {
 	var party={
-	    "nickName": (obj.iIdentification==-1 ? obj.natObs.user_login : obj.natObs.identifications[obj.iIdentification].user.login),
+	    "name": (obj.iIdentification==-1 ? obj.natObs.user_login : obj.natObs.identifications[obj.iIdentification].user.login),
 	    "role": "individual",  //"institution"
 	    "authId": "1ffffff1-1ff1-1ff1-1ff1-1ffffffffff1"
 	}	
@@ -374,7 +389,7 @@ function CreateOnePartyIfNeeded(obj)
 	UpdateProgressArea(obj,"\nNatusfera user name is '"+obj.natObs.identifications[obj.iIdentification].user.login+"'. Checking STAplus Parties...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Parties?$select=nickName,role,id&$filter=nickName eq '"+obj.natObs.identifications[obj.iIdentification].user.login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
+	ajax.doGet(obj.sta+"/Parties?$select=name,role,id&$filter=name eq '"+obj.natObs.identifications[obj.iIdentification].user.login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
 }
 
 ///////////////Project
@@ -436,7 +451,7 @@ function CreateProject(obj, created_at, terms)
 		"description": "This is the project " + obj.natObs.project_observations[0].project.id + " in Natusfera",
 		"url" : obj.nat+"/projects/" + obj.natObs.project_observations[0].id,
 		"termsOfUse": terms,
-		"created" : created_at
+		"creationTime" : created_at
 	}	
 	UpdateProgressArea(obj,"Creating the Project \"" + obj.natObs.project_observations[0].project.title + "\"...\n");
 	obj.ajax=new Ajax();
@@ -1004,7 +1019,7 @@ function CreateGroup(obj)
 	var group={
 	    "name": obj.natObs.uri,
 	    "description": "Observation of a " + obj.natObs.species_guess,
-	    "created": obj.natObs.created_at_utc
+	    "creationTime": obj.natObs.created_at_utc
 	}	
 	UpdateProgressArea(obj,"Creating the Group \"" + obj.natObs.uri + "\"...\n");
 	obj.ajax=new Ajax();
@@ -1420,26 +1435,33 @@ function StorePictureObservationId(id, obj)
 
 
 ////////////// Getting the Natusfera record.
-function GetNatusferaRecord(natObsUrl, obj)
+function GetNatusferaRecord(obj)
 {
+	if (obj.natObsUrls.length==0 || obj.natObsUrls[0].length<2)
+		return;
+	obj.natObsUrl=obj.natObsUrls[0];
+	obj.natObsUrls.shift();
 	obj.iFunction=0;
 	var ajax_nat=new Ajax();
-	UpdateProgressArea(obj,"Reading the Natusfera record \"" + natObsUrl + "\"...\n");
+	UpdateProgressArea(obj,"==================================================================================="+
+			       "\nReading the Natusfera record \"" + obj.natObsUrl + "\"...\n");
 	ajax_nat.setHandlerErr(ErrorResposeAjax);
-	ajax_nat.doGet(natObsUrl, InterpretNatusferaRecord, "application/json", obj);
+	ajax_nat.doGet(obj.natObsUrl, InterpretNatusferaRecord, "application/json", obj);
 }
 
 function InterpretNatusferaRecord(natObs, obj)
 {
 	obj.natObs=natObs;
-	UpdateProgressArea(obj,"Natusfera record downloaded. Extracting information...\n");
+	UpdateProgressArea(obj,"\nNatusfera record downloaded. Extracting information...\n");
 	obj.functions[obj.iFunction](obj);
 }
 
 // Transforming one Natusfera record into a STAplus
-function Nat2STA(natObsUrl, sta, token, progressArea, linkResultDiv)
+function NatRecord2STA(natObsUrl, sta, token, progressArea, linkResultDiv)
 {
-	GetNatusferaRecord(natObsUrl, {functions: [CreateStartingPartyIfNeeded, 
+	GetNatusferaRecord({
+		natObsUrls: [natObsUrl],
+		functions: [CreateStartingPartyIfNeeded, 
 			CreateProjectIfNeeded, 
 			CreateHumanSensorIfNeeded, 
 			CreateTaxonObservedPropertyIfNeeded, 
@@ -1458,13 +1480,61 @@ function Nat2STA(natObsUrl, sta, token, progressArea, linkResultDiv)
 			CreatePartiesIfNeeded,
 			CreateTaxonDatastreamsIfNeeded,
 			CreateTaxonObservationsIfNeeded,
-			SayDone], 
+			SayDone,
+			GetNatusferaRecord], 
 		nat: ExtractNatEndPoint(natObsUrl), 
+		sta: sta, 
+		accessToken: token, 
+		progressArea: progressArea, 
+		linkResultDiv: linkResultDiv,})
+	return false;
+}
+
+// Transforming one Natusfera record into a STAplus
+function NatRecordList2STA(natObsUrls, sta, token, progressArea, linkResultDiv)
+{
+	if (natObsUrls.length)
+	
+	GetNatusferaRecord({
+			natObsUrls: natObsUrls,
+			functions: [CreateStartingPartyIfNeeded, 
+			CreateProjectIfNeeded, 
+			CreateHumanSensorIfNeeded, 
+			CreateTaxonObservedPropertyIfNeeded, 
+			CreateLicenseIfNeeded, 
+			CreateStartingHumanThingIfNeeded, 
+			CreateFeatureOfInterestIfNeeded, 
+			CreateGroupIfNeeded, 
+			CreateCommunityTaxonDatastreamIfNeeded,
+			CreateCommunityTaxonObservationIfNeeded, 
+			CreateCameraSensorIfNeeded, 
+			CreatePictureObservedPropertyIfNeeded, 
+			CreateCameraThingIfNeeded, 
+			CreatePictureDatastreamIfNeeded,
+			CreatePictureObservationsIfNeeded, 
+			CreateHumanThingsIfNeeded,
+			CreatePartiesIfNeeded,
+			CreateTaxonDatastreamsIfNeeded,
+			CreateTaxonObservationsIfNeeded,
+			SayDone,
+			GetNatusferaRecord], 
+		nat: ExtractNatEndPoint(natObsUrls[0]), 
 		sta: sta, 
 		accessToken: token, 
 		progressArea: progressArea, 
 		linkResultDiv: linkResultDiv})
 	return false;
+}
+
+// Transforming a list of Natusfera records into a STAplus
+function Nat2STA(form, linkResultDiv)
+{
+	if (form.nat_option.value=="one")
+		NatRecord2STA(form.nat.value, form.sta.value, form.token.value, form.progress, linkResultDiv);
+	else if (form.nat_option.value=="list")
+	{
+		NatRecordList2STA(form.nat_list.value.split("\n"), form.sta.value, form.token.value, form.progress, linkResultDiv);
+	}
 }
 </script>
 </head>
@@ -1472,12 +1542,17 @@ function Nat2STA(natObsUrl, sta, token, progressArea, linkResultDiv)
 <body>
 <h1>Exporting a Natusfera record to STAPlus</h1>
 
-<form name="form" onSubmit="return Nat2STA(document.form.nat.value, document.form.sta.value, document.form.token.value, document.form.progress, document.getElementById('link_result'));">
-Record in Natusfera: <input type="text" size="60" name="nat" value="https://natusfera.gbif.es/observations/313411.json"> (in JSON format)<br>
-Root of the STA+ service: <input type="text" size="60" name="sta" value="https://cos4cloud.secd.eu/staplus/v1.1"><br>
+<form name="form" onSubmit="return false">
+<input type="radio" id="nat-option-one" name="nat_option" value="one"> <label for="nat-option-one">Record in Natusfera:</label> <input type="text" size="60" name="nat" value="https://natusfera.gbif.es/observations/313411.json"> (in JSON format)<br>
+<input type="radio" id="nat-option-list" name="nat_option" value="list" checked="checked"> <label for="nat-option-list">List of records in Natusfera:</label> (list of URLs responding JSON format)<br>
+<textarea id="nat-list" name="nat_list" rows="10" cols="70" align="top">
+https://natusfera.gbif.es/observations/313411.json
+https://natusfera.gbif.es/observations/313412.json
+</textarea>
+<br>
+Root of the STA+ service: <input type="text" size="60" name="sta" value="https://cos4cloud.secd.eu/natusfera/v1.1"><br>
 Access Token: <input type="text" size="60" name="token" value="97adaedd9ca4992bbfd1b93e777fd8b1d85ec3f3"><br>
-<input type="submit" value="Export to STA+">
-<input type="button" value="Export to STA+ debug" onClick="return Nat2STA(document.form.nat.value, document.form.sta.value, document.form.token.value, document.form.progress, document.getElementById('link_result'));">
+<input type="button" value="Export to STA+" onClick="return Nat2STA(document.form, document.getElementById('link_result'));">
 <p>
 <textarea id="progress-area" name="progress" rows=25 cols=120>
 </textarea>
