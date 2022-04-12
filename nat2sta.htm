@@ -1260,10 +1260,10 @@ function StorePictureDatastreamId(id, obj)
 function CreateCommunityTaxonObservationIfNeeded(obj)
 {
 	obj.iFunction++;
-	UpdateProgressArea(obj,"\nNatusfera taxon id is '"+obj.natObs.community_taxon_id+"' (" + obj.natObs.species_guess + "). Checking STAplus Observations...\n");
+	UpdateProgressArea(obj,"\nNatusfera taxon id is '"+(obj.natObs.community_taxon_id ? obj.natObs.community_taxon_id : obj.natObs.taxon_id)+"' (" + obj.natObs.species_guess + "). Checking STAplus Observations...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id;$filter=id eq '"+obj.communityTaxonDatastreamId+"')&$filter=result eq "+obj.natObs.community_taxon_id+" and resultTime eq " + obj.natObs.created_at_utc + " and phenomenonTime eq " + obj.natObs.time_observed_at_utc + "", InterpretTaxonObservation, "application/json", obj);
+	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id;$filter=id eq '"+obj.communityTaxonDatastreamId+"')&$filter=result eq "+(obj.natObs.community_taxon_id ? obj.natObs.community_taxon_id : obj.natObs.taxon_id)+" and resultTime eq " + obj.natObs.created_at_utc + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + "", InterpretTaxonObservation, "application/json", obj);
 }
 
 function InterpretTaxonObservation(resources, obj)
@@ -1271,7 +1271,7 @@ function InterpretTaxonObservation(resources, obj)
 	if (resources && resources.value && resources.value.length)
 	{
 		var id=resources.value[0]["@iot.id"];
-		UpdateProgressArea(obj,"Observation \"" + (obj.iIdentification==-1 ? obj.natObs.community_taxon_id : obj.natObs.identifications[obj.iIdentification].taxon_id) + "\" already existed under id=\""+id+"\"\n");
+		UpdateProgressArea(obj,"Observation \"" + (obj.iIdentification==-1 ? (obj.natObs.community_taxon_id ? obj.natObs.community_taxon_id : obj.natObs.taxon_id) : obj.natObs.identifications[obj.iIdentification].taxon_id) + "\" already existed under id=\""+id+"\"\n");
 		StoreTaxonObservationId(id, obj);
 	}
 	else					
@@ -1290,9 +1290,9 @@ function CreateTaxonObservation(obj)
 	}
 
 	var observation={
-		"result": (obj.iIdentification==-1 ? obj.natObs.community_taxon_id : obj.natObs.identifications[obj.iIdentification].taxon_id),
+		"result": (obj.iIdentification==-1 ? (obj.natObs.community_taxon_id ? obj.natObs.community_taxon_id : obj.natObs.taxon_id) : obj.natObs.identifications[obj.iIdentification].taxon_id),
 		"resultTime": created_at, 
-		"phenomenonTime": obj.natObs.time_observed_at_utc,
+		"phenomenonTime": (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc),
 		"FeatureOfInterest": { "@iot.id": obj.featureOfInterestId },
 		"Groups": [{ "@iot.id": obj.groupId }]
 	};
@@ -1307,7 +1307,7 @@ function CreateTaxonObservation(obj)
 	else
 		observation.Datastream={ "@iot.id": obj.taxonDatastreamId[obj.iIdentification] };
 
-	UpdateProgressArea(obj,"Creating the Observation \"" + (obj.iIdentification==-1 ? obj.natObs.community_taxon_id : obj.natObs.identifications[obj.iIdentification].taxon_id) + "\"...\n");
+	UpdateProgressArea(obj,"Creating the Observation \"" + (obj.iIdentification==-1 ? (obj.natObs.community_taxon_id ? obj.natObs.community_taxon_id : obj.natObs.taxon_id) : obj.natObs.identifications[obj.iIdentification].taxon_id) + "\"...\n");
 	obj.ajax=new Ajax();
 	obj.ajax.setAccessToken(obj.accessToken, null);
 	obj.ajax.setHandlerErr(ErrorResposeAjax);
@@ -1317,7 +1317,7 @@ function CreateTaxonObservation(obj)
 function EvaluateResponseCreateTaxonObservation(data, obj)
 {
 	var id=ExtractIdFromURL(obj.ajax.getResponseHeader("Location"));
-	UpdateProgressArea(obj,"Observation \"" + (obj.iIdentification==-1 ? obj.natObs.community_taxon_id : obj.natObs.identifications[obj.iIdentification].taxon_id) + "\" CREATED under id=\""+id+"\"\n");
+	UpdateProgressArea(obj,"Observation \"" + (obj.iIdentification==-1 ? (obj.natObs.community_taxon_id ? obj.natObs.community_taxon_id : obj.natObs.taxon_id) : obj.natObs.identifications[obj.iIdentification].taxon_id) + "\" CREATED under id=\""+id+"\"\n");
 	StoreTaxonObservationId(id, obj);
 }
 
@@ -1359,7 +1359,7 @@ function CreateOneTaxonObservationIfNeeded(obj)
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
 	var d = new Date(obj.natObs.identifications[obj.iIdentification].created_at);
-	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id;$filter=id eq '"+obj.taxonDatastreamId[obj.iIdentification]+"')&$filter=result eq " + obj.natObs.identifications[obj.iIdentification].taxon_id + " and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + obj.natObs.time_observed_at_utc + "", InterpretTaxonObservation, "application/json", obj);
+	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id;$filter=id eq '"+obj.taxonDatastreamId[obj.iIdentification]+"')&$filter=result eq " + obj.natObs.identifications[obj.iIdentification].taxon_id + " and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + "", InterpretTaxonObservation, "application/json", obj);
 }
 
 ///////////////Picture Observation
@@ -1385,7 +1385,7 @@ function CreateOnePictureObservationIfNeeded(obj)
 	var d = new Date(obj.natObs.observation_photos[obj.iPictureObservation].photo.created_at);	
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id;$filter=id eq '"+obj.pictureDatastreamId+"')&$filter=result eq '"+obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url+"' and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + obj.natObs.time_observed_at_utc + "", InterpretPictureObservation, "application/json", obj);
+	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id;$filter=id eq '"+obj.pictureDatastreamId+"')&$filter=result eq '"+obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url+"' and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + "", InterpretPictureObservation, "application/json", obj);
 }
 
 function InterpretPictureObservation(resources, obj)
@@ -1406,7 +1406,7 @@ function CreatePictureObservation(obj)
 	var observation={
 		"result": obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url,
 		"resultTime": d.toISOString(), 
-		"phenomenonTime": obj.natObs.time_observed_at_utc,
+		"phenomenonTime": (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc),
 		"FeatureOfInterest": { "@iot.id": obj.featureOfInterestId },
 		"Groups": [{ "@iot.id": obj.groupId }],
 		"Datastream": { "@iot.id": obj.pictureDatastreamId },
@@ -1452,7 +1452,16 @@ function GetNatusferaRecord(obj)
 function InterpretNatusferaRecord(natObs, obj)
 {
 	obj.natObs=natObs;
-	UpdateProgressArea(obj,"\nNatusfera record downloaded. Extracting information...\n");
+	UpdateProgressArea(obj,"\nNatusfera record downloaded.");
+
+	if (typeof obj.natObs.longitude === "undefined" || obj.natObs.longitude==null || 
+		typeof obj.natObs.latitude === "undefined" || obj.natObs.latitude==null)
+	{
+		UpdateProgressArea(obj,"\nThis Natusfera record does not contain position information expressed as latitude/longidude coordinates. Skipping.\n\n");
+		obj.functions[obj.functions.length-1](obj);
+	}
+
+	UpdateProgressArea(obj,"Extracting information...\n");
 	obj.functions[obj.iFunction](obj);
 }
 
