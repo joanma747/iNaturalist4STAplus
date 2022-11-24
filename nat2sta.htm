@@ -1052,7 +1052,7 @@ function CreateCommunityTaxonDatastreamIfNeeded(obj)
 	UpdateProgressArea(obj,"\nChecking STAplus Datastreams...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,name,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.startingPartyId + "'),Sensor($select=id;$filter=id eq '" + obj.humanSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.taxonObservedPropertyId + "'),License($select=id;$filter=id eq '" + obj.licenseId + "'),Thing($select=id;$filter=id eq '" + obj.startingHumanThingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Community Agreed Species Identification ("+obj.natObs.user_login+", Taxon)'";
+	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,name,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.startingPartyId + "'),Sensor($select=id;$filter=id eq '" + obj.humanSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.taxonObservedPropertyId + "')" + (obj.licenseId ? ",License($select=id;$filter=id eq '" + obj.licenseId + "')," : "") + ",Thing($select=id;$filter=id eq '" + obj.startingHumanThingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Community Agreed Species Identification ("+obj.natObs.user_login+", Taxon)'";
 	ajax.doGet(url, InterpretCommunityTaxonDatastream, "application/json", obj);
 }
 
@@ -1082,9 +1082,10 @@ function CreateCommunityTaxonDatastream(obj)
 		"Party": { "@iot.id": obj.startingPartyId },
 		"Sensor": { "@iot.id": obj.humanSensorId },
 		"ObservedProperty": { "@iot.id": obj.taxonObservedPropertyId },
-		"License": { "@iot.id": obj.licenseId },
 		"Thing": { "@iot.id": obj.startingHumanThingId },
 	};
+	if (obj.licenseId)	
+		datastream.License={ "@iot.id": obj.licenseId };
 	if (obj.projectId)
 		datastream.Project={ "@iot.id": obj.projectId };
 
@@ -1132,7 +1133,7 @@ function CreateOneTaxonDatastreamIfNeeded(obj)
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
 	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +
-			"&$expand=Party($select=id;$filter=id eq '" + obj.partyId[obj.iIdentification] + "'),Sensor($select=id;$filter=id eq '" + obj.humanSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.taxonObservedPropertyId + "'),License($select=id;$filter=id eq '" + obj.licenseId + "'),Thing($select=id;$filter=id eq '" + obj.humanThingId[obj.iIdentification] + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Species Identification ("+obj.natObs.identifications[obj.iIdentification].user.login+", Taxon)'";
+			"&$expand=Party($select=id;$filter=id eq '" + obj.partyId[obj.iIdentification] + "'),Sensor($select=id;$filter=id eq '" + obj.humanSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.taxonObservedPropertyId + "')" + (obj.licenseId ? ",License($select=id;$filter=id eq '" + obj.licenseId + "')" : "") + ",Thing($select=id;$filter=id eq '" + obj.humanThingId[obj.iIdentification] + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Species Identification ("+obj.natObs.identifications[obj.iIdentification].user.login+", Taxon)'";
 	ajax.doGet(url, InterpretTaxonDatastream, "application/json", obj);
 }
 
@@ -1162,9 +1163,10 @@ function CreateTaxonDatastream(obj)
 		"Party": { "@iot.id": obj.partyId[obj.iIdentification] },
 		"Sensor": { "@iot.id": obj.humanSensorId },
 		"ObservedProperty": { "@iot.id": obj.taxonObservedPropertyId },
-		"License": { "@iot.id": obj.licenseId },
-		"Thing": { "@iot.id": obj.humanThingId[obj.iIdentification] },
+		"Thing": { "@iot.id": obj.humanThingId[obj.iIdentification] }
 	};
+	if (obj.licenseId)	
+		datastream.License={ "@iot.id": obj.licenseId };
 	if (obj.projectId)
 		datastream.Project={ "@iot.id": obj.projectId };
 
@@ -1197,7 +1199,7 @@ function CreatePictureDatastreamIfNeeded(obj)
 	UpdateProgressArea(obj,"\nChecking STAplus Datastreams...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.startingPartyId + "'),Sensor($select=id;$filter=id eq '" + obj.cameraSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.pictureObservedPropertyId + "'),License($select=id;$filter=id eq '" + obj.licenseId + "'),Thing($select=id;$filter=id eq '" + obj.cameraThingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'N/A' and name eq 'Pictures for Species Identification ("+obj.natObs.user_login+", Taxon)'";
+	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.startingPartyId + "'),Sensor($select=id;$filter=id eq '" + obj.cameraSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.pictureObservedPropertyId + "')" + (obj.licenseId ? ",License($select=id;$filter=id eq '" + obj.licenseId + "')," : "") + ",Thing($select=id;$filter=id eq '" + obj.cameraThingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'N/A' and name eq 'Pictures for Species Identification ("+obj.natObs.user_login+", Taxon)'";
 	ajax.doGet(url, InterpretPictureDatastream, "application/json", obj);
 }
 
@@ -1227,9 +1229,10 @@ function CreatePictureDatastream(obj)
 		"Party": { "@iot.id": obj.startingPartyId },
 		"Sensor": { "@iot.id": obj.cameraSensorId },
 		"ObservedProperty": { "@iot.id": obj.pictureObservedPropertyId },
-		"License": { "@iot.id": obj.licenseId },
-		"Thing": { "@iot.id": obj.cameraThingId },
+		"Thing": { "@iot.id": obj.cameraThingId }
 	};
+	if (obj.licenseId)	
+		datastream.License={ "@iot.id": obj.licenseId };
 	if (obj.projectId)
 		datastream.Project={ "@iot.id": obj.projectId };
 
@@ -1552,14 +1555,14 @@ function Nat2STA(form, linkResultDiv)
 <h1>Exporting a Natusfera record to STAPlus</h1>
 
 <form name="form" onSubmit="return false">
-<input type="radio" id="nat-option-one" name="nat_option" value="one"> <label for="nat-option-one">Record in Natusfera:</label> <input type="text" size="60" name="nat" value="https://natusfera.gbif.es/observations/313411.json"> (in JSON format)<br>
-<input type="radio" id="nat-option-list" name="nat_option" value="list" checked="checked"> <label for="nat-option-list">List of records in Natusfera:</label> (list of URLs responding JSON format)<br>
+<input type="radio" id="nat-option-one" name="nat_option" value="one" checked="checked"> <label for="nat-option-one">Record in Natusfera:</label> <input type="text" size="60" name="nat" value="https://www.inaturalist.org/observations/119037783.json"> (in JSON format)<br>
+<input type="radio" id="nat-option-list" name="nat_option" value="list"> <label for="nat-option-list">List of records in Natusfera:</label> (list of URLs responding JSON format)<br>
 <textarea id="nat-list" name="nat_list" rows="10" cols="70" align="top">
 https://natusfera.gbif.es/observations/313411.json
 https://natusfera.gbif.es/observations/313412.json
 </textarea>
 <br>
-Root of the STA+ service: <input type="text" size="60" name="sta" value="https://cos4cloud.secd.eu/natusfera/v1.1"><br>
+Root of the STA+ service: <input type="text" size="60" name="sta" value="https://cos4cloud.demo.secure-dimensions.de/staplus/v1.1"><br>
 Access Token: <input type="text" size="60" name="token" value="97adaedd9ca4992bbfd1b93e777fd8b1d85ec3f3"><br>
 <input type="button" value="Export to STA+" onClick="return Nat2STA(document.form, document.getElementById('link_result'));">
 <p>
