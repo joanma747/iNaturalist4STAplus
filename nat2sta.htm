@@ -1052,7 +1052,7 @@ function CreateCommunityTaxonDatastreamIfNeeded(obj)
 	UpdateProgressArea(obj,"\nChecking STAplus Datastreams...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,name,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.startingPartyId + "'),Sensor($select=id;$filter=id eq '" + obj.humanSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.taxonObservedPropertyId + "')" + (obj.licenseId ? ",License($select=id;$filter=id eq '" + obj.licenseId + "')," : "") + ",Thing($select=id;$filter=id eq '" + obj.startingHumanThingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Community Agreed Species Identification ("+obj.natObs.user_login+", Taxon)'";
+	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,name,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.startingPartyId + "'),Sensor($select=id;$filter=id eq '" + obj.humanSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.taxonObservedPropertyId + "')" + (obj.licenseId ? ",License($select=id;$filter=id eq '" + obj.licenseId + "')" : "") + ",Thing($select=id;$filter=id eq '" + obj.startingHumanThingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Community Agreed Species Identification ("+obj.natObs.user_login+", Taxon)'";
 	ajax.doGet(url, InterpretCommunityTaxonDatastream, "application/json", obj);
 }
 
@@ -1199,7 +1199,7 @@ function CreatePictureDatastreamIfNeeded(obj)
 	UpdateProgressArea(obj,"\nChecking STAplus Datastreams...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.startingPartyId + "'),Sensor($select=id;$filter=id eq '" + obj.cameraSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.pictureObservedPropertyId + "')" + (obj.licenseId ? ",License($select=id;$filter=id eq '" + obj.licenseId + "')," : "") + ",Thing($select=id;$filter=id eq '" + obj.cameraThingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'N/A' and name eq 'Pictures for Species Identification ("+obj.natObs.user_login+", Taxon)'";
+	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.startingPartyId + "'),Sensor($select=id;$filter=id eq '" + obj.cameraSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.pictureObservedPropertyId + "')" + (obj.licenseId ? ",License($select=id;$filter=id eq '" + obj.licenseId + "')" : "") + ",Thing($select=id;$filter=id eq '" + obj.cameraThingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'N/A' and name eq 'Pictures for Species Identification ("+obj.natObs.user_login+", Taxon)'";
 	ajax.doGet(url, InterpretPictureDatastream, "application/json", obj);
 }
 
