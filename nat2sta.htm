@@ -335,8 +335,8 @@ function CreateParty(obj)
 {
 	var party={
 	    "name": (obj.iIdentification==-1 ? obj.natObs.user_login : obj.natObs.identifications[obj.iIdentification].user.login),
-	    "role": "individual",  //"institution"
-	    "authId": "1ffffff1-1ff1-1ff1-1ff1-1ffffffffff1"
+	    "role": "individual"  //"institution"
+	    //"authId": "1ffffff1-1ff1-1ff1-1ff1-1ffffffffff1"  Only specify if you want to have control on the @iot.id value.
 	}	
 	UpdateProgressArea(obj,"Creating the Party \"" + (obj.iIdentification==-1 ? obj.natObs.user_login : obj.natObs.identifications[obj.iIdentification].user.login) + "\"...\n");
 	obj.ajax=new Ajax();
