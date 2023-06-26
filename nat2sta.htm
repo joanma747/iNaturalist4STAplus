@@ -316,7 +316,8 @@ function CreateStartingPartyIfNeeded(obj)
 	UpdateProgressArea(obj,"\nNatusfera user name is '"+obj.natObs.user_login+"'. Checking STAplus Parties...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Parties?$select=name,role,id&$filter=name eq '"+obj.natObs.user_login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
+	//ajax.doGet(obj.sta+"/Parties?$select=name,role,id&$filter=name eq '"+obj.natObs.user_login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
+	ajax.doGet(obj.sta+"/Parties?$filter=name eq '"+obj.natObs.user_login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
 }
 
 function InterpretParty(resources, obj)
@@ -389,7 +390,8 @@ function CreateOnePartyIfNeeded(obj)
 	UpdateProgressArea(obj,"\nNatusfera user name is '"+obj.natObs.identifications[obj.iIdentification].user.login+"'. Checking STAplus Parties...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Parties?$select=name,role,id&$filter=name eq '"+obj.natObs.identifications[obj.iIdentification].user.login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
+	//ajax.doGet(obj.sta+"/Parties?$select=name,role,id&$filter=name eq '"+obj.natObs.identifications[obj.iIdentification].user.login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
+	ajax.doGet(obj.sta+"/Parties?$filter=name eq '"+obj.natObs.identifications[obj.iIdentification].user.login+"' and role eq 'individual'", InterpretParty, "application/json", obj);
 }
 
 ///////////////Project
@@ -403,7 +405,8 @@ function CreateProjectIfNeeded(obj)
 		UpdateProgressArea(obj,"\nNatusfera project title is '"+name+"'. Checking STAplus Projects...\n");
 		var ajax=new Ajax();
 		ajax.setHandlerErr(ErrorResposeAjax);
-		ajax.doGet(obj.sta+"/Projects?$select=name,id&$filter=name eq '"+encodeURIComponent(name)+"'", InterpretProject, "application/json", obj);
+		//ajax.doGet(obj.sta+"/Projects?$select=name,id&$filter=name eq '"+encodeURIComponent(name)+"'", InterpretProject, "application/json", obj);
+		ajax.doGet(obj.sta+"/Projects?$filter=name eq '"+encodeURIComponent(name)+"'", InterpretProject, "application/json", obj);
 	}
 	else
 		StoreProjectId(null, obj);
@@ -484,7 +487,8 @@ function CreateHumanSensorIfNeeded(obj)
 	UpdateProgressArea(obj,"\nChecking STAplus Sensors...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Sensors?$select=name,id&$filter=name eq 'Human Eye'", InterpretHumanSensor, "application/json", obj);
+	//ajax.doGet(obj.sta+"/Sensors?$select=name,id&$filter=name eq 'Human Eye'", InterpretHumanSensor, "application/json", obj);
+	ajax.doGet(obj.sta+"/Sensors?$filter=name eq 'Human Eye'", InterpretHumanSensor, "application/json", obj);
 }
 
 function InterpretHumanSensor(resources, obj)
@@ -537,7 +541,8 @@ function CreateCameraSensorIfNeeded(obj)
 	UpdateProgressArea(obj,"\nChecking STAplus Sensors...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Sensors?$select=name,id&$filter=name eq 'Generic camera'", InterpretCameraSensor, "application/json", obj);
+	//ajax.doGet(obj.sta+"/Sensors?$select=name,id&$filter=name eq 'Generic camera'", InterpretCameraSensor, "application/json", obj);
+	ajax.doGet(obj.sta+"/Sensors?$filter=name eq 'Generic camera'", InterpretCameraSensor, "application/json", obj);
 }
 
 function InterpretCameraSensor(resources, obj)
@@ -591,7 +596,8 @@ function CreateTaxonObservedPropertyIfNeeded(obj)
 	UpdateProgressArea(obj,"\nChecking STAplus ObservedProperties...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/ObservedProperties?$select=name,definition,id&$filter=name eq 'Taxon' and definition eq 'https://www.gbif.org/dataset/d7dddbf4-2cf0-4f39-9b2a-bb099caae36c'", InterpretTaxonObservedProperty, "application/json", obj);
+	//ajax.doGet(obj.sta+"/ObservedProperties?$select=name,definition,id&$filter=name eq 'Taxon' and definition eq 'https://www.gbif.org/dataset/d7dddbf4-2cf0-4f39-9b2a-bb099caae36c'", InterpretTaxonObservedProperty, "application/json", obj);
+	ajax.doGet(obj.sta+"/ObservedProperties?$filter=name eq 'Taxon' and definition eq 'https://www.gbif.org/dataset/d7dddbf4-2cf0-4f39-9b2a-bb099caae36c'", InterpretTaxonObservedProperty, "application/json", obj);
 }
 
 function InterpretTaxonObservedProperty(resources, obj)
@@ -643,7 +649,8 @@ function CreatePictureObservedPropertyIfNeeded(obj)
 	UpdateProgressArea(obj,"\nChecking STAplus ObservedProperties...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/ObservedProperties?$select=name,definition,id&$filter=name eq 'Species picture' and definition eq 'https://www.inaturalist.org/guides/2465'", InterpretPictureObservedProperty, "application/json", obj);
+	//ajax.doGet(obj.sta+"/ObservedProperties?$select=name,definition,id&$filter=name eq 'Species picture' and definition eq 'https://www.inaturalist.org/guides/2465'", InterpretPictureObservedProperty, "application/json", obj);
+	ajax.doGet(obj.sta+"/ObservedProperties?$filter=name eq 'Species picture' and definition eq 'https://www.inaturalist.org/guides/2465'", InterpretPictureObservedProperty, "application/json", obj);
 }
 
 function InterpretPictureObservedProperty(resources, obj)
@@ -759,7 +766,8 @@ function CreateLicenseIfNeeded(obj)
 	}
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Licenses?$select=name,id&$filter=name eq '"+license.name+"'", InterpretLicense, "application/json", obj);
+	//ajax.doGet(obj.sta+"/Licenses?$select=name,id&$filter=name eq '"+license.name+"'", InterpretLicense, "application/json", obj);
+	ajax.doGet(obj.sta+"/Licenses?$filter=name eq '"+license.name+"'", InterpretLicense, "application/json", obj);
 }
 
 function InterpretLicense(resources, obj)
@@ -807,7 +815,8 @@ function CreateStartingHumanThingIfNeeded(obj)
 	UpdateProgressArea(obj,"\nNatusfera user name is '"+obj.natObs.user_login+"'. Checking STAplus Things...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Things?$select=name,id&$filter=name eq '"+obj.natObs.user_login+"'", InterpretHumanThing, "application/json", obj);
+	//ajax.doGet(obj.sta+"/Things?$select=name,id&$filter=name eq '"+obj.natObs.user_login+"'", InterpretHumanThing, "application/json", obj);
+	ajax.doGet(obj.sta+"/Things?$filter=name eq '"+obj.natObs.user_login+"'", InterpretHumanThing, "application/json", obj);
 }
 
 function InterpretHumanThing(resources, obj)
@@ -879,7 +888,8 @@ function CreateOneHumanThingIfNeeded(obj)
 	UpdateProgressArea(obj,"\nNatusfera user name is '"+obj.natObs.identifications[obj.iIdentification].user.login+"'. Checking STAplus Things...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Things?$select=name,id&$filter=name eq '"+obj.natObs.identifications[obj.iIdentification].user.login+"'", InterpretHumanThing, "application/json", obj);
+	//ajax.doGet(obj.sta+"/Things?$select=name,id&$filter=name eq '"+obj.natObs.identifications[obj.iIdentification].user.login+"'", InterpretHumanThing, "application/json", obj);
+	ajax.doGet(obj.sta+"/Things?$filter=name eq '"+obj.natObs.identifications[obj.iIdentification].user.login+"'", InterpretHumanThing, "application/json", obj);
 }
 
 ///////////////Camera Thing
@@ -890,7 +900,8 @@ function CreateCameraThingIfNeeded(obj)
 	UpdateProgressArea(obj,"\nNatusfera user name is '"+obj.natObs.user_login+"'. Checking STAplus Camera Things...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Things?$select=name,id&$filter=name eq 'Camera of "+obj.natObs.user_login+"'", InterpretCameraThing, "application/json", obj);
+	//ajax.doGet(obj.sta+"/Things?$select=name,id&$filter=name eq 'Camera of "+obj.natObs.user_login+"'", InterpretCameraThing, "application/json", obj);
+	ajax.doGet(obj.sta+"/Things?$filter=name eq 'Camera of "+obj.natObs.user_login+"'", InterpretCameraThing, "application/json", obj);
 }
 
 function InterpretCameraThing(resources, obj)
@@ -940,7 +951,8 @@ function CreateFeatureOfInterestIfNeeded(obj)
 	UpdateProgressArea(obj,"\nNatusfera position is longitude: "+obj.natObs.longitude+ " latitude: "+obj.natObs.latitude+". Checking STAplus FeaturesOfInterest...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/FeaturesOfInterest?$select=id&$filter=st_equals(feature, geography'POINT (" + obj.natObs.longitude + " " + obj.natObs.latitude + ")')", InterpretFeatureOfInterest, "application/json", obj);
+	//ajax.doGet(obj.sta+"/FeaturesOfInterest?$select=id&$filter=st_equals(feature, geography'POINT (" + obj.natObs.longitude + " " + obj.natObs.latitude + ")')", InterpretFeatureOfInterest, "application/json", obj);
+	ajax.doGet(obj.sta+"/FeaturesOfInterest?$filter=st_equals(feature, geography'POINT (" + obj.natObs.longitude + " " + obj.natObs.latitude + ")')", InterpretFeatureOfInterest, "application/json", obj);
 }
 
 function InterpretFeatureOfInterest(resources, obj)
@@ -999,7 +1011,8 @@ function CreateGroupIfNeeded(obj)
 	UpdateProgressArea(obj,"\nNatusfera observation uri is '"+obj.natObs.uri+"'. Checking STAplus Groups...\n");
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
-	ajax.doGet(obj.sta+"/Groups?$select=name,id&$filter=name eq '"+obj.natObs.uri+"'", InterpretGroup, "application/json", obj);
+	//ajax.doGet(obj.sta+"/Groups?$select=name,id&$filter=name eq '"+obj.natObs.uri+"'", InterpretGroup, "application/json", obj);
+	ajax.doGet(obj.sta+"/Groups?$filter=name eq '"+obj.natObs.uri+"'", InterpretGroup, "application/json", obj);
 }
 
 function InterpretGroup(resources, obj)
@@ -1053,7 +1066,8 @@ function CreateCommunityTaxonDatastreamIfNeeded(obj)
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
 	//Sintaxi erronea abans 1-6-2023: var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,name,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.startingPartyId + "'),Sensor($select=id;$filter=id eq '" + obj.humanSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.taxonObservedPropertyId + "')" + (obj.licenseId ? ",License($select=id;$filter=id eq '" + obj.licenseId + "')" : "") + ",Thing($select=id;$filter=id eq '" + obj.startingHumanThingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Community Agreed Species Identification ("+obj.natObs.user_login+", Taxon)'";
-	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,name,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id),Sensor($select=id),ObservedProperty($select=id)" + (obj.licenseId ? ",License($select=id)" : "") + ",Thing($select=id)" + (obj.projectId ? ",Project($select=id)" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Community Agreed Species Identification ("+obj.natObs.user_login+", Taxon)' and Party/id eq '" + obj.startingPartyId + "' and Sensor/id eq '" + obj.humanSensorId + "' and ObservedProperty/id eq '" + obj.taxonObservedPropertyId + "'" + (obj.licenseId ? " and License/id eq '" + obj.licenseId + "'" : "") + " and Thing/id eq '" + obj.startingHumanThingId + "'" + (obj.projectId ? " and Project/id eq '" + obj.projectId + "'" : ""); 
+	//var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,name,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id),Sensor($select=id),ObservedProperty($select=id)" + (obj.licenseId ? ",License($select=id)" : "") + ",Thing($select=id)" + (obj.projectId ? ",Project($select=id)" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Community Agreed Species Identification ("+obj.natObs.user_login+", Taxon)' and Party/id eq '" + obj.startingPartyId + "' and Sensor/id eq '" + obj.humanSensorId + "' and ObservedProperty/id eq '" + obj.taxonObservedPropertyId + "'" + (obj.licenseId ? " and License/id eq '" + obj.licenseId + "'" : "") + " and Thing/id eq '" + obj.startingHumanThingId + "'" + (obj.projectId ? " and Project/id eq '" + obj.projectId + "'" : ""); 
+	var url=obj.sta+"/Datastreams?$expand=Party,Sensor,ObservedProperty" + (obj.licenseId ? ",License" : "") + ",Thing" + (obj.projectId ? ",Project" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Community Agreed Species Identification ("+obj.natObs.user_login+", Taxon)' and Party/id eq '" + obj.startingPartyId + "' and Sensor/id eq '" + obj.humanSensorId + "' and ObservedProperty/id eq '" + obj.taxonObservedPropertyId + "'" + (obj.licenseId ? " and License/id eq '" + obj.licenseId + "'" : "") + " and Thing/id eq '" + obj.startingHumanThingId + "'" + (obj.projectId ? " and Project/id eq '" + obj.projectId + "'" : ""); 
 	ajax.doGet(url, InterpretCommunityTaxonDatastream, "application/json", obj);
 }
 
@@ -1135,8 +1149,9 @@ function CreateOneTaxonDatastreamIfNeeded(obj)
 	ajax.setHandlerErr(ErrorResposeAjax);
 	//Sintaxi erronea abans 1-6-2023: var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +
 	//		"&$expand=Party($select=id;$filter=id eq '" + obj.partyId[obj.iIdentification] + "'),Sensor($select=id;$filter=id eq '" + obj.humanSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.taxonObservedPropertyId + "')" + (obj.licenseId ? ",License($select=id;$filter=id eq '" + obj.licenseId + "')" : "") + ",Thing($select=id;$filter=id eq '" + obj.humanThingId[obj.iIdentification] + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Species Identification ("+obj.natObs.identifications[obj.iIdentification].user.login+", Taxon)'";
-	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +
-			"&$expand=Party($select=id),Sensor($select=id),ObservedProperty($select=id)" + (obj.licenseId ? ",License($select=id)" : "") + ",Thing($select=id)" + (obj.projectId ? ",Project($select=id)" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Species Identification ("+obj.natObs.identifications[obj.iIdentification].user.login+", Taxon)' and Party/id eq '" + obj.partyId[obj.iIdentification] + "' and Sensor/id eq '" + obj.humanSensorId + "' and ObservedProperty/id eq '" + obj.taxonObservedPropertyId + "'" + (obj.licenseId ? " and License/id eq '" + obj.licenseId + "'" : "") + " and Thing/id eq '" + obj.humanThingId[obj.iIdentification] + "'" + (obj.projectId ? " and Project/id eq '" + obj.projectId + "'" : "");
+	//var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +
+	//		"&$expand=Party($select=id),Sensor($select=id),ObservedProperty($select=id)" + (obj.licenseId ? ",License($select=id)" : "") + ",Thing($select=id)" + (obj.projectId ? ",Project($select=id)" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Species Identification ("+obj.natObs.identifications[obj.iIdentification].user.login+", Taxon)' and Party/id eq '" + obj.partyId[obj.iIdentification] + "' and Sensor/id eq '" + obj.humanSensorId + "' and ObservedProperty/id eq '" + obj.taxonObservedPropertyId + "'" + (obj.licenseId ? " and License/id eq '" + obj.licenseId + "'" : "") + " and Thing/id eq '" + obj.humanThingId[obj.iIdentification] + "'" + (obj.projectId ? " and Project/id eq '" + obj.projectId + "'" : "");
+	var url=obj.sta+"/Datastreams?$expand=Party,Sensor,ObservedProperty" + (obj.licenseId ? ",License" : "") + ",Thing" + (obj.projectId ? ",Project" : "") + "&$filter=unitOfMeasurement/name eq 'Identifier' and name eq 'Species Identification ("+obj.natObs.identifications[obj.iIdentification].user.login+", Taxon)' and Party/id eq '" + obj.partyId[obj.iIdentification] + "' and Sensor/id eq '" + obj.humanSensorId + "' and ObservedProperty/id eq '" + obj.taxonObservedPropertyId + "'" + (obj.licenseId ? " and License/id eq '" + obj.licenseId + "'" : "") + " and Thing/id eq '" + obj.humanThingId[obj.iIdentification] + "'" + (obj.projectId ? " and Project/id eq '" + obj.projectId + "'" : "");
 	ajax.doGet(url, InterpretTaxonDatastream, "application/json", obj);
 }
 
@@ -1203,7 +1218,8 @@ function CreatePictureDatastreamIfNeeded(obj)
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
 	//Sintaxi erronea abans 1-6-2023: var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id;$filter=id eq '" + obj.startingPartyId + "'),Sensor($select=id;$filter=id eq '" + obj.cameraSensorId + "'),ObservedProperty($select=id;$filter=id eq '" + obj.pictureObservedPropertyId + "')" + (obj.licenseId ? ",License($select=id;$filter=id eq '" + obj.licenseId + "')" : "") + ",Thing($select=id;$filter=id eq '" + obj.cameraThingId + "')" + (obj.projectId ? ",Project($select=id;$filter=id eq '" + obj.projectId + "')" : "") + "&$filter=unitOfMeasurement/name eq 'N/A' and name eq 'Pictures for Species Identification ("+obj.natObs.user_login+", Taxon)'";
-	var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id),Sensor($select=id),ObservedProperty($select=id)" + (obj.licenseId ? ",License($select=id)" : "") + ",Thing($select=id)" + (obj.projectId ? ",Project($select=id)" : "") + "&$filter=unitOfMeasurement/name eq 'N/A' and name eq 'Pictures for Species Identification ("+obj.natObs.user_login+", Taxon)' and Party/id eq '" + obj.startingPartyId + "' and Sensor/id eq '" + obj.cameraSensorId + "' and ObservedProperty/id eq '" + obj.pictureObservedPropertyId + "'" + (obj.licenseId ? " and License/id eq '" + obj.licenseId + "'" : "") + " and Thing/id eq '" + obj.cameraThingId + "'" + (obj.projectId ? "and Project/id eq '" + obj.projectId + "'" : "");
+	//var url=obj.sta+"/Datastreams?$select=Party,Sensor,ObservedProperty,License,Thing,unitOfMeasurement,id" + (obj.projectId ? ",Project" : "") +"&$expand=Party($select=id),Sensor($select=id),ObservedProperty($select=id)" + (obj.licenseId ? ",License($select=id)" : "") + ",Thing($select=id)" + (obj.projectId ? ",Project($select=id)" : "") + "&$filter=unitOfMeasurement/name eq 'N/A' and name eq 'Pictures for Species Identification ("+obj.natObs.user_login+", Taxon)' and Party/id eq '" + obj.startingPartyId + "' and Sensor/id eq '" + obj.cameraSensorId + "' and ObservedProperty/id eq '" + obj.pictureObservedPropertyId + "'" + (obj.licenseId ? " and License/id eq '" + obj.licenseId + "'" : "") + " and Thing/id eq '" + obj.cameraThingId + "'" + (obj.projectId ? "and Project/id eq '" + obj.projectId + "'" : "");
+	var url=obj.sta+"/Datastreams?$expand=Party,Sensor,ObservedProperty" + (obj.licenseId ? ",License" : "") + ",Thing" + (obj.projectId ? ",Project" : "") + "&$filter=unitOfMeasurement/name eq 'N/A' and name eq 'Pictures for Species Identification ("+obj.natObs.user_login+", Taxon)' and Party/id eq '" + obj.startingPartyId + "' and Sensor/id eq '" + obj.cameraSensorId + "' and ObservedProperty/id eq '" + obj.pictureObservedPropertyId + "'" + (obj.licenseId ? " and License/id eq '" + obj.licenseId + "'" : "") + " and Thing/id eq '" + obj.cameraThingId + "'" + (obj.projectId ? "and Project/id eq '" + obj.projectId + "'" : "");
 	ajax.doGet(url, InterpretPictureDatastream, "application/json", obj);
 }
 
@@ -1271,7 +1287,8 @@ function CreateCommunityTaxonObservationIfNeeded(obj)
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
 	//Sintaxi erronea abans 1-6-2023: ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id;$filter=id eq '"+obj.communityTaxonDatastreamId+"')&$filter=result eq "+(obj.natObs.community_taxon_id ? obj.natObs.community_taxon_id : obj.natObs.taxon_id)+" and resultTime eq " + obj.natObs.created_at_utc + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + "", InterpretTaxonObservation, "application/json", obj);
-	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id)&$filter=result eq "+(obj.natObs.community_taxon_id ? obj.natObs.community_taxon_id : obj.natObs.taxon_id)+" and resultTime eq " + obj.natObs.created_at_utc + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + " and Datastream/id eq '"+obj.communityTaxonDatastreamId+"'", InterpretTaxonObservation, "application/json", obj);
+	//ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id)&$filter=result eq "+(obj.natObs.community_taxon_id ? obj.natObs.community_taxon_id : obj.natObs.taxon_id)+" and resultTime eq " + obj.natObs.created_at_utc + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + " and Datastream/id eq '"+obj.communityTaxonDatastreamId+"'", InterpretTaxonObservation, "application/json", obj);
+	ajax.doGet(obj.sta+"/Observations?$expand=Datastream&$filter=result eq "+(obj.natObs.community_taxon_id ? obj.natObs.community_taxon_id : obj.natObs.taxon_id)+" and resultTime eq " + obj.natObs.created_at_utc + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + " and Datastream/id eq '"+obj.communityTaxonDatastreamId+"'", InterpretTaxonObservation, "application/json", obj);
 }
 
 function InterpretTaxonObservation(resources, obj)
@@ -1368,7 +1385,8 @@ function CreateOneTaxonObservationIfNeeded(obj)
 	ajax.setHandlerErr(ErrorResposeAjax);
 	var d = new Date(obj.natObs.identifications[obj.iIdentification].created_at);
 	//Sintaxi erronea abans 1-6-2023: ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id;$filter=id eq '"+obj.taxonDatastreamId[obj.iIdentification]+"')&$filter=result eq " + obj.natObs.identifications[obj.iIdentification].taxon_id + " and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + "", InterpretTaxonObservation, "application/json", obj);
-	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id)&$filter=result eq " + obj.natObs.identifications[obj.iIdentification].taxon_id + " and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + " and Datastream/id eq '"+obj.taxonDatastreamId[obj.iIdentification]+"'", InterpretTaxonObservation, "application/json", obj);
+	//ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id)&$filter=result eq " + obj.natObs.identifications[obj.iIdentification].taxon_id + " and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + " and Datastream/id eq '"+obj.taxonDatastreamId[obj.iIdentification]+"'", InterpretTaxonObservation, "application/json", obj);
+	ajax.doGet(obj.sta+"/Observations?$expand=Datastream&$filter=result eq " + obj.natObs.identifications[obj.iIdentification].taxon_id + " and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + " and Datastream/id eq '"+obj.taxonDatastreamId[obj.iIdentification]+"'", InterpretTaxonObservation, "application/json", obj);
 }
 
 ///////////////Picture Observation
@@ -1395,7 +1413,8 @@ function CreateOnePictureObservationIfNeeded(obj)
 	var ajax=new Ajax();
 	ajax.setHandlerErr(ErrorResposeAjax);
 	//Sintaxi erronea abans 1-6-2023: ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id;$filter=id eq '"+obj.pictureDatastreamId+"')&$filter=result eq '"+obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url+"' and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + "", InterpretPictureObservation, "application/json", obj);
-	ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id)&$filter=result eq '"+obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url+"' and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + " and Datastream/id eq '"+obj.pictureDatastreamId+"'", InterpretPictureObservation, "application/json", obj);
+	//ajax.doGet(obj.sta+"/Observations?$select=result,resultTime,phenomenonTime,Datastream,id&$expand=Datastream($select=id)&$filter=result eq '"+obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url+"' and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + " and Datastream/id eq '"+obj.pictureDatastreamId+"'", InterpretPictureObservation, "application/json", obj);
+	ajax.doGet(obj.sta+"/Observations?$expand=Datastream&$filter=result eq '"+obj.natObs.observation_photos[obj.iPictureObservation].photo.large_url+"' and resultTime eq " + d.toISOString() + " and phenomenonTime eq " + (obj.natObs.time_observed_at_utc ? obj.natObs.time_observed_at_utc : obj.natObs.created_at_utc) + " and Datastream/id eq '"+obj.pictureDatastreamId+"'", InterpretPictureObservation, "application/json", obj);
 }
 
 function InterpretPictureObservation(resources, obj)
