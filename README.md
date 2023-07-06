@@ -1,2 +1,2 @@
-# Natusfera4STAplus
-Import a Natusfera record and exporting it into a STAplus service.
+# iNaturalist4STAplus
+Import a iNaturalist record and exports it into a STAplus service.
